@@ -138,6 +138,8 @@ class DocumentNormalizer:
             "font_size": primary_font_size,
             "fonts": sorted(fonts),
             "line_count": len(block.lines),
+            "page_width": record.page_width,
+            "page_height": record.page_height,
         }
 
         return ContentUnit(
@@ -172,6 +174,8 @@ class DocumentNormalizer:
             "row_count": table.row_count,
             "column_count": table.column_count,
             "raw_cells": table.cells,
+            "page_width": record.page_width,
+            "page_height": record.page_height,
         }
 
         return ContentUnit(

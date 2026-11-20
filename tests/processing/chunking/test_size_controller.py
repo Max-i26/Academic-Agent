@@ -161,3 +161,19 @@ class TestSizeController:
         assert len(sentences) == 2
         assert "e.g." in sentences[0]
         assert "Dr. Smith" in sentences[1]
+
+    def test_small_chunk_reason_tagging(self):
+        controller = SizeController(ChunkingConfig(target_words=50, max_words=100, min_words=20))
+        unit = ContentUnit(
+            unit_id="eq1",
+            document_id="doc1",
+            source_file="doc1.pdf",
+            page_number=1,
+            content_type=ContentType.EQUATION,
+            text="y = mx + b",
+        )
+        group = SemanticGroup(group_id="g1", document_id="doc1", source_file="doc1.pdf", units=[unit])
+        drafts = controller.control_size([group])
+        assert len(drafts) == 1
+        assert drafts[0].word_count < 20
+        assert drafts[0].metadata.get("small_chunk_reason") == "atomic_equation"

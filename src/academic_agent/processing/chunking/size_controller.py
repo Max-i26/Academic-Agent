@@ -365,6 +365,16 @@ class SizeController:
         char_count = len(text)
         token_count = self.tokenizer.count_tokens(text)
 
+        metadata: dict[str, Any] = {"units_count": len(units)}
+        current_size = token_count if self.config.target_tokens is not None else word_count
+        if current_size < self.min_size:
+            metadata["small_chunk_reason"] = self._determine_small_chunk_reason(
+                units=units,
+                text=text,
+                dominant_type=dominant_type,
+                source_pages=source_pages,
+            )
+
         return DraftChunk(
             document_id=doc_id,
             source_file=source_file,
@@ -376,8 +386,29 @@ class SizeController:
             word_count=word_count,
             char_count=char_count,
             token_count=token_count,
-            metadata={"units_count": len(units)},
+            metadata=metadata,
         )
+
+    def _determine_small_chunk_reason(
+        self,
+        units: list[ContentUnit],
+        text: str,
+        dominant_type: ContentType,
+        source_pages: list[int],
+    ) -> str:
+        """Categorize why a chunk is below preferred minimum size."""
+        lower_text = text.lower()
+        if dominant_type == ContentType.EQUATION:
+            return "atomic_equation"
+        if dominant_type == ContentType.TABLE:
+            return "table_fragment"
+        if any(u.content_type == ContentType.HEADING for u in units) and len(units) > 1:
+            return "heading_with_content"
+        if any(term in lower_text for term in ("definition", "means", "defined as", "formula")):
+            return "standalone_definition"
+        if len(source_pages) == 1:
+            return "short_slide"
+        return "unclassified"
 
     def _create_split_chunk(
         self,
@@ -393,6 +424,9 @@ class SizeController:
 
         metadata = dict(unit.metadata)
         metadata["forced_split"] = forced_split
+        current_size = token_count if self.config.target_tokens is not None else word_count
+        if current_size < self.min_size:
+            metadata["small_chunk_reason"] = "split_fragment"
 
         return DraftChunk(
             document_id=unit.document_id,

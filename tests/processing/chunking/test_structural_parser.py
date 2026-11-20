@@ -189,3 +189,63 @@ class TestStructuralParser:
 
         parsed = parser.parse(units)
         assert parsed[0].content_type == ContentType.TABLE
+
+    def test_relative_page_height_heading_detection(self):
+        parser = StructuralParser()
+        # Page height 800: y0=120 is 15% (<=22%), so it qualifies as near top
+        units = [
+            ContentUnit(
+                unit_id="u1",
+                document_id="doc1",
+                source_file="doc1.pdf",
+                page_number=1,
+                content_type=ContentType.UNKNOWN,
+                text="Advanced ARIMA Specifications",
+                metadata={"bbox": (50.0, 120.0, 400.0, 155.0), "font_size": 24.0, "page_height": 800.0},
+            ),
+            ContentUnit(
+                unit_id="u2",
+                document_id="doc1",
+                source_file="doc1.pdf",
+                page_number=1,
+                content_type=ContentType.UNKNOWN,
+                text="Body paragraph describing non-seasonal difference terms.",
+                metadata={"bbox": (50.0, 200.0, 400.0, 220.0), "font_size": 12.0, "page_height": 800.0},
+            ),
+        ]
+        parsed = parser.parse(units)
+        assert parsed[0].content_type == ContentType.HEADING
+        assert parsed[0].section_title == "Advanced ARIMA Specifications"
+        assert parsed[1].content_type == ContentType.PARAGRAPH
+
+    def test_running_footer_rejected_as_heading(self):
+        parser = StructuralParser()
+        units = [
+            ContentUnit(
+                unit_id="u1",
+                document_id="doc1",
+                source_file="doc1.pdf",
+                page_number=1,
+                content_type=ContentType.UNKNOWN,
+                text="DS5104 • Lecture 2 • Slide 1",
+                metadata={"bbox": (50.0, 500.0, 400.0, 520.0), "font_size": 14.0, "page_height": 540.0},
+            ),
+        ]
+        parsed = parser.parse(units)
+        assert parsed[0].content_type == ContentType.PARAGRAPH
+
+    def test_slide_with_no_title(self):
+        parser = StructuralParser()
+        units = [
+            ContentUnit(
+                unit_id="u1",
+                document_id="doc1",
+                source_file="doc1.pdf",
+                page_number=1,
+                content_type=ContentType.UNKNOWN,
+                text="Just an ordinary explanation starting immediately.",
+                metadata={"bbox": (50.0, 150.0, 400.0, 170.0), "font_size": 12.0, "page_height": 540.0},
+            ),
+        ]
+        parsed = parser.parse(units)
+        assert parsed[0].content_type == ContentType.PARAGRAPH

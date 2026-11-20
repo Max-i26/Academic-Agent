@@ -184,12 +184,13 @@ class StructuralParser:
             if "@" in lower_text or "ds5104" in lower_text:
                 return True
 
-        # Check geometry: bottom 10% of slide
+        # Check geometry: bottom 12% of slide or page
         bbox = unit.metadata.get("bbox")
         if bbox and len(bbox) == 4:
             y0 = bbox[1]
-            if y0 >= 490.0:  # standard 540pt slide height
-                if "ds5104" in lower_text or "slide" in lower_text:
+            page_height = unit.metadata.get("page_height", 540.0)
+            if y0 >= (page_height * 0.88):
+                if "ds5104" in lower_text or "slide" in lower_text or "@" in lower_text:
                     return True
 
         return False
@@ -214,10 +215,12 @@ class StructuralParser:
         if font_size is not None and body_font_size is not None:
             if bbox is not None and len(bbox) == 4:
                 y0 = bbox[1]
-                is_near_top = y0 <= 100.0
+                page_height = unit.metadata.get("page_height", 540.0)
+                # Relative vertical position: near top of slide or page (top 22% of page height)
+                is_near_top = y0 <= (page_height * 0.22)
                 is_prominent_font = (
                     page_max_font is not None
-                    and font_size >= page_max_font * 0.90
+                    and font_size >= page_max_font * 0.88
                     and font_size >= body_font_size * 1.05
                 )
 
@@ -325,7 +328,8 @@ class StructuralParser:
             return None
 
         font_sizes.sort()
-        mid = len(font_sizes) // 2
+        # Use lower median so body text is prioritized even in small samples
+        mid = (len(font_sizes) - 1) // 2
         return font_sizes[mid]
 
     @staticmethod
