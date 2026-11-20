@@ -115,11 +115,17 @@ class ChunkValidator:
             # 6. Budget boundary adherence
             if config is not None:
                 is_forced = chunk.metadata.get("forced_split", False)
-                if not is_forced and chunk.word_count > config.max_words:
-                    raise ChunkValidationError(
-                        f"Chunk {chunk.chunk_id} exceeds maximum word limit: "
-                        f"{chunk.word_count} > {config.max_words}"
-                    )
+                if not is_forced:
+                    if config.max_tokens is not None and chunk.estimated_token_count > config.max_tokens:
+                        raise ChunkValidationError(
+                            f"Chunk {chunk.chunk_id} exceeds maximum token limit: "
+                            f"{chunk.estimated_token_count} > {config.max_tokens}"
+                        )
+                    if config.max_tokens is None and chunk.word_count > config.max_words:
+                        raise ChunkValidationError(
+                            f"Chunk {chunk.chunk_id} exceeds maximum word limit: "
+                            f"{chunk.word_count} > {config.max_words}"
+                        )
 
             if chunk.metadata.get("forced_split"):
                 forced_splits += 1

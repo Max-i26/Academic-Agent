@@ -98,6 +98,41 @@ class TestStructuralParser:
         assert parsed[1].content_type == ContentType.PARAGRAPH
         assert parsed[2].content_type == ContentType.PARAGRAPH
 
+    def test_prose_transitions_and_labels_are_not_headings(self):
+        parser = StructuralParser()
+        units = [
+            ContentUnit(
+                unit_id="u1",
+                document_id="doc1",
+                source_file="doc1.pdf",
+                page_number=9,
+                content_type=ContentType.UNKNOWN,
+                text="WHY IS IT CALLED EXPONENTIAL?",
+                section_title="WHY IS IT CALLED EXPONENTIAL?",
+            ),
+            ContentUnit(
+                unit_id="u2",
+                document_id="doc1",
+                source_file="doc1.pdf",
+                page_number=9,
+                content_type=ContentType.UNKNOWN,
+                text="Therefore:",
+            ),
+            ContentUnit(
+                unit_id="u3",
+                document_id="doc1",
+                source_file="doc1.pdf",
+                page_number=9,
+                content_type=ContentType.UNKNOWN,
+                text="Smoothed levels:",
+            ),
+        ]
+
+        parsed = parser.parse(units)
+        assert parsed[0].content_type == ContentType.HEADING
+        assert parsed[1].content_type == ContentType.PARAGRAPH
+        assert parsed[2].content_type == ContentType.PARAGRAPH
+
     def test_detect_equations(self):
         parser = StructuralParser()
         units = [

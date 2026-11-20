@@ -39,14 +39,14 @@ The system is designed with modular components:
 - Text Cleaning (`TextCleaner`) & Line Reconstruction (`TextSegmenter`)
 - **Structure-Aware Chunking Engine** (`ChunkingEngine`):
   - **Stage A — Document Normalization**: Ingests `PageRecord` and `PageLayoutRecord`, preserving bounding boxes and typography into standard `ContentUnit`s.
-  - **Stage B — Structural Parsing**: Identifies headings, mathematical equations, bullet lists, tables, and paragraphs.
-  - **Stage C — Semantic Grouping**: Contextually groups headings with introductory explanations, equations with definitions, and bullet lists together.
+  - **Stage B — Structural Parsing**: Layout-driven slide title detection, prose transition filtering (`Therefore:`, `However:`), running header/footer rejection, and identification of formulas, lists, tables, and paragraphs.
+  - **Stage C — Semantic Grouping**: Preserves slide-level derivation steps, binding headings with introductory explanations and equations with definitions.
   - **Stage D — Size Controller**: Structure-aware recursive splitting with word/token budgets and oversized table row splitting with repeated headers.
-  - **Stage E — Overlap Manager**: Sentence-bounded, section-constrained contextual overlap.
+  - **Stage E — Overlap Manager**: Sentence-bounded, section-constrained contextual overlap bounded by remaining token headroom.
   - **Stage F — Provenance Tracking**: Multi-page tracking, source-unit references, and deterministic SHA-256 chunk IDs.
-  - **Stage G — Output Validation**: Rigorous integrity validation (`ValidationReport`).
-- **115 automated tests passing** across unit, boundary, and integration suites.
-- **Real-world evaluation verified** on all 7 DS5104 Time Series lectures (237 pages, 147 chunks generated, 0 forced splits).
+  - **Stage G — Output Validation**: Rigorous integrity validation against token and word limits (`ValidationReport`).
+- **116 automated tests passing** across unit, boundary, and integration suites.
+- **Real-world evaluation verified** on all 7 DS5104 Time Series lectures (237 pages, 234 chunks generated, 0 exceeding 220 tokens, 0 forced splits).
 
 ## Installation
 

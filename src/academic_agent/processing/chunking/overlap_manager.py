@@ -39,6 +39,10 @@ class OverlapManager:
         self.size_controller = size_controller or SizeController(self.config, self.tokenizer)
 
     @property
+    def max_budget(self) -> int:
+        return self.config.max_tokens or self.config.max_words
+
+    @property
     def target_overlap(self) -> int:
         return self.config.overlap_tokens or self.config.overlap_words
 
@@ -90,7 +94,37 @@ class OverlapManager:
                 overlapped_chunks.append(current)
                 continue
 
-            # 4. Combine overlap with current chunk text
+            # 4. Enforce authoritative token/size ceiling: overlap must fit within remaining budget headroom
+            current_size = self._get_size(current.text)
+            remaining_headroom = self.max_budget - current_size
+            if remaining_headroom <= 0:
+                # Chunk already fills or exceeds the size budget; omit overlap to prevent budget breach
+                overlapped_chunks.append(current)
+                continue
+
+            # If overlap exceeds available headroom, trim sentences from the front
+            overlap_sentences = self.size_controller.split_sentences(overlap_text)
+            fitted_sentences: list[str] = []
+            accumulated_overlap = 0
+
+            for s in reversed(overlap_sentences):
+                s_size = self._get_size(s)
+                if (
+                    accumulated_overlap + s_size <= remaining_headroom
+                    and accumulated_overlap + s_size <= self.max_overlap
+                ):
+                    fitted_sentences.insert(0, s)
+                    accumulated_overlap += s_size
+                else:
+                    break
+
+            if not fitted_sentences:
+                overlapped_chunks.append(current)
+                continue
+
+            overlap_text = " ".join(fitted_sentences)
+
+            # 5. Combine overlap with current chunk text
             new_text = f"{overlap_text}\n\n{current.text}"
             overlap_words = len(overlap_text.split())
             new_word_count = len(new_text.split())
