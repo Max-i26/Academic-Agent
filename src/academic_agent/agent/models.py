@@ -2,7 +2,8 @@
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, Optional, Set, Tuple, Union
+from types import MappingProxyType
+from typing import Any, Dict, FrozenSet, Mapping, Optional, Set, Tuple, Union
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from academic_agent.generation.synthesis.models import AcademicAnswer
@@ -43,55 +44,57 @@ class InvalidStateTransitionError(Exception):
         self.to_state = to_state
 
 
-# Explicit validated FSM transition matrix
-VALID_STATE_TRANSITIONS: Dict[AgentState, Set[AgentState]] = {
-    AgentExecutionState.INITIALIZED: {
+# Explicit validated immutable FSM transition matrix
+_TRANSITIONS_RAW: Dict[AgentState, FrozenSet[AgentState]] = {
+    AgentExecutionState.INITIALIZED: frozenset({
         AgentExecutionState.PLANNING,
         AgentTerminalState.TERMINATED_CANCELLED,
         AgentTerminalState.TERMINATED_ERROR,
-    },
-    AgentExecutionState.PLANNING: {
+    }),
+    AgentExecutionState.PLANNING: frozenset({
         AgentExecutionState.ACTION_SELECTION,
         AgentExecutionState.ANSWER_SYNTHESIS,
         AgentTerminalState.TERMINATED_ABSTENTION,
         AgentTerminalState.TERMINATED_BUDGET_EXCEEDED,
         AgentTerminalState.TERMINATED_CANCELLED,
         AgentTerminalState.TERMINATED_ERROR,
-    },
-    AgentExecutionState.ACTION_SELECTION: {
+    }),
+    AgentExecutionState.ACTION_SELECTION: frozenset({
         AgentExecutionState.TOOL_INVOCATION,
         AgentExecutionState.ANSWER_SYNTHESIS,
         AgentTerminalState.TERMINATED_ABSTENTION,
         AgentTerminalState.TERMINATED_BUDGET_EXCEEDED,
         AgentTerminalState.TERMINATED_CANCELLED,
         AgentTerminalState.TERMINATED_ERROR,
-    },
-    AgentExecutionState.TOOL_INVOCATION: {
+    }),
+    AgentExecutionState.TOOL_INVOCATION: frozenset({
         AgentExecutionState.OBSERVATION_PROCESSING,
         AgentTerminalState.TERMINATED_BUDGET_EXCEEDED,
         AgentTerminalState.TERMINATED_CANCELLED,
         AgentTerminalState.TERMINATED_ERROR,
-    },
-    AgentExecutionState.OBSERVATION_PROCESSING: {
+    }),
+    AgentExecutionState.OBSERVATION_PROCESSING: frozenset({
         AgentExecutionState.PLANNING,
         AgentExecutionState.ANSWER_SYNTHESIS,
         AgentTerminalState.TERMINATED_BUDGET_EXCEEDED,
         AgentTerminalState.TERMINATED_CANCELLED,
         AgentTerminalState.TERMINATED_ERROR,
-    },
-    AgentExecutionState.ANSWER_SYNTHESIS: {
+    }),
+    AgentExecutionState.ANSWER_SYNTHESIS: frozenset({
         AgentTerminalState.TERMINATED_SUCCESS,
         AgentTerminalState.TERMINATED_ABSTENTION,
         AgentTerminalState.TERMINATED_CANCELLED,
         AgentTerminalState.TERMINATED_ERROR,
-    },
+    }),
     # Terminal states have no permitted outgoing transitions
-    AgentTerminalState.TERMINATED_SUCCESS: set(),
-    AgentTerminalState.TERMINATED_ABSTENTION: set(),
-    AgentTerminalState.TERMINATED_BUDGET_EXCEEDED: set(),
-    AgentTerminalState.TERMINATED_ERROR: set(),
-    AgentTerminalState.TERMINATED_CANCELLED: set(),
+    AgentTerminalState.TERMINATED_SUCCESS: frozenset(),
+    AgentTerminalState.TERMINATED_ABSTENTION: frozenset(),
+    AgentTerminalState.TERMINATED_BUDGET_EXCEEDED: frozenset(),
+    AgentTerminalState.TERMINATED_ERROR: frozenset(),
+    AgentTerminalState.TERMINATED_CANCELLED: frozenset(),
 }
+
+VALID_STATE_TRANSITIONS: Mapping[AgentState, FrozenSet[AgentState]] = MappingProxyType(_TRANSITIONS_RAW)
 
 
 class ToolErrorCategory(str, Enum):

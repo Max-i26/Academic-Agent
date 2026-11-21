@@ -129,3 +129,25 @@ class TestExecutionBudgetTracker:
         assert tracker.token_usage.prompt_tokens == 1600
         assert tracker.token_usage.completion_tokens == 800
         assert tracker.token_usage.total_tokens == 2400
+
+    def test_concurrent_atomic_duplicate_interception(self):
+        """Concurrent submission of identical tool calls authorizes exactly one and intercepts the rest."""
+        tracker = ExecutionBudgetTracker(config=BudgetConfig(max_tool_invocations=100))
+        identical_call = ToolCall(call_id="cid", tool_name="search", arguments={"query": "GARCH(1,1)", "top_k": 5})
+
+        results = []
+
+        def submit():
+            auth, reason = tracker.record_tool_call(identical_call)
+            return auth
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            futures = [executor.submit(submit) for _ in range(10)]
+            for f in futures:
+                results.append(f.result())
+
+        # Exactly one authorized, 9 rejected as duplicates
+        assert results.count(True) == 1
+        assert results.count(False) == 9
+        assert tracker.duplicate_calls_detected == 9
+        assert tracker.tool_invocations == 1

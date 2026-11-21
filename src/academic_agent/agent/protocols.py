@@ -42,6 +42,44 @@ class ToolProtocol(Protocol):
 
 
 @runtime_checkable
+class ToolRegistryProtocol(Protocol):
+    """Protocol for tool registration, discovery, and schema cataloging."""
+
+    def register(self, tool: ToolProtocol) -> None:
+        """Register a tool instance, validating uniqueness and contract compliance."""
+        ...
+
+    def get(self, name: str) -> Optional[ToolProtocol]:
+        """Retrieve registered tool by name (case-insensitive)."""
+        ...
+
+    def has(self, name: str) -> bool:
+        """Check if tool name is registered."""
+        ...
+
+    def list_tools(self) -> List[ToolProtocol]:
+        """List all currently registered tools."""
+        ...
+
+    def get_schemas(self) -> List[Dict[str, Any]]:
+        """Return JSON Schema specifications for all registered tools."""
+        ...
+
+
+@runtime_checkable
+class ToolDispatcherProtocol(Protocol):
+    """Protocol for authorized, isolated, and bounded tool execution."""
+
+    def dispatch(
+        self,
+        tool_call: ToolCall,
+        budget_tracker: Optional["ExecutionBudgetTrackerProtocol"] = None,
+    ) -> ToolResult:
+        """Execute tool call with pre-authorization, hard timeout, and error containment."""
+        ...
+
+
+@runtime_checkable
 class StepPlannerProtocol(Protocol):
     """Protocol for proposing next reasoning and action steps."""
 

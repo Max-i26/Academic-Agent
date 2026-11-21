@@ -107,3 +107,16 @@ class TestAgentStateMachine:
 
         with pytest.raises(InvalidStateTransitionError, match="Cannot transition from terminal state"):
             fsm.transition_to(AgentTerminalState.TERMINATED_ERROR)
+
+    def test_transition_table_deep_immutability(self):
+        """VALID_STATE_TRANSITIONS table and its destination sets cannot be mutated."""
+        from academic_agent.agent.models import VALID_STATE_TRANSITIONS
+
+        # Dictionary modification rejected
+        with pytest.raises(TypeError):
+            VALID_STATE_TRANSITIONS[AgentExecutionState.INITIALIZED] = set()
+
+        # Destination set modification rejected
+        destinations = VALID_STATE_TRANSITIONS[AgentExecutionState.INITIALIZED]
+        with pytest.raises(AttributeError):
+            destinations.add("NEW_STATE")
