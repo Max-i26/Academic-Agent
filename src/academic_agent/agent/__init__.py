@@ -33,6 +33,24 @@ from academic_agent.agent.budget import ExecutionBudgetTracker, BudgetExceededEr
 from academic_agent.agent.registry import ToolRegistry
 from academic_agent.agent.dispatcher import ToolDispatcher
 from academic_agent.agent.parser import StructuralValidationError, StructuredPlannerParser
+from academic_agent.agent.prompts import (
+    PLANNER_SYSTEM_PROMPT,
+    REPAIR_SYSTEM_PROMPT,
+    build_planner_prompt,
+    build_repair_prompt,
+)
+from academic_agent.agent.scratchpad import (
+    escape_untrusted_content,
+    serialize_tool_result,
+    wrap_untrusted_observation,
+    format_scratchpad,
+)
+from academic_agent.agent.decision_policy import (
+    PolicyRejectionCategory,
+    PolicyDecision,
+    DecisionPolicy,
+)
+from academic_agent.agent.planner import ReActStepPlanner
 from academic_agent.agent.tools import (
     BaseAgentTool,
     AcademicSearchArgs,
@@ -86,6 +104,22 @@ __all__ = [
     # Structured Parser & Exceptions
     "StructuralValidationError",
     "StructuredPlannerParser",
+    # Prompts
+    "PLANNER_SYSTEM_PROMPT",
+    "REPAIR_SYSTEM_PROMPT",
+    "build_planner_prompt",
+    "build_repair_prompt",
+    # Scratchpad
+    "escape_untrusted_content",
+    "serialize_tool_result",
+    "wrap_untrusted_observation",
+    "format_scratchpad",
+    # Decision Policy
+    "PolicyRejectionCategory",
+    "PolicyDecision",
+    "DecisionPolicy",
+    # ReAct Step Planner
+    "ReActStepPlanner",
     # Academic Tools & Policies
     "BaseAgentTool",
     "AcademicSearchArgs",
