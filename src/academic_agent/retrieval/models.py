@@ -75,6 +75,7 @@ class RetrievalCandidate(BaseModel):
     text: str = Field(default="", description="Verbatim academic text.")
     source_file: str = Field(default="", description="Source lecture PDF filename.")
     source_pages: list[int] = Field(default_factory=list, description="Associated lecture page numbers.")
+    source_unit_ids: list[str] = Field(default_factory=list, description="Associated source layout unit IDs.")
     section_title: str | None = Field(default=None, description="Slide or section heading.")
     content_type: str = Field(default="PARAGRAPH", description="Content classification.")
     fragment_index: int = Field(default=0, ge=0, description="0-based sequence index.")
@@ -94,6 +95,7 @@ class RetrievalCandidate(BaseModel):
             text=self.text,
             source_file=self.source_file,
             source_pages=self.source_pages,
+            source_unit_ids=list(self.source_unit_ids),
             section_title=self.section_title,
             content_type=self.content_type,
             fragment_index=self.fragment_index,
@@ -113,6 +115,7 @@ class Evidence(BaseModel):
     text: str = Field(description="Evidence text to ground the academic answer.")
     source_file: str = Field(description="Source lecture PDF filename.")
     source_pages: list[int] = Field(description="Contributing page numbers.")
+    source_unit_ids: list[str] = Field(default_factory=list, description="Associated source layout unit IDs.")
     section_title: str | None = Field(default=None, description="Section heading context.")
     content_type: str = Field(default="PARAGRAPH", description="Content classification.")
     fragment_index: int = Field(default=0, ge=0, description="0-based fragment index.")

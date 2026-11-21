@@ -158,6 +158,7 @@ class InMemoryVectorStore:
                     text=cand.text,
                     source_file=cand.source_file,
                     source_pages=cand.source_pages,
+                    source_unit_ids=list(cand.source_unit_ids),
                     section_title=cand.section_title,
                     content_type=cand.content_type,
                     fragment_index=cand.fragment_index,

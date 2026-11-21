@@ -16,6 +16,7 @@ from academic_agent.retrieval.protocols import (
     RerankerProtocol,
     RetrievalPipelineProtocol,
 )
+from academic_agent.retrieval.dense_retriever import DenseRetriever
 
 __all__ = [
     "RetrievalStrategy",
@@ -30,4 +31,5 @@ __all__ = [
     "FusionStrategyProtocol",
     "RerankerProtocol",
     "RetrievalPipelineProtocol",
+    "DenseRetriever",
 ]

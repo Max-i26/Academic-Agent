@@ -82,6 +82,7 @@ class SearchResult(BaseModel):
     text: str = Field(description="Evidence text to be provided to the LLM context.")
     source_file: str = Field(description="Originating PDF lecture.")
     source_pages: list[int] = Field(description="Page numbers for citation provenance.")
+    source_unit_ids: list[str] = Field(default_factory=list, description="Raw layout unit references.")
     section_title: str | None = Field(default=None, description="Section heading context.")
     content_type: str = Field(default="PARAGRAPH", description="Content classification.")
     fragment_index: int = Field(default=0, description="Fragment index.")

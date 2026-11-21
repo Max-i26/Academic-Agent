@@ -238,6 +238,7 @@ class LanceDBVectorStore:
                     text=r["text"],
                     source_file=r["source_file"],
                     source_pages=list(r["source_pages"]),
+                    source_unit_ids=list(r.get("source_unit_ids") or []),
                     section_title=r.get("section_title"),
                     content_type=r.get("content_type", "PARAGRAPH"),
                     fragment_index=r.get("fragment_index", 0),
