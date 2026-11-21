@@ -144,10 +144,10 @@ class LancePersistenceManager:
         """Verify that an existing table's schema and metadata match expected_metadata."""
         schema = tbl.schema
         actual_meta = extract_index_metadata(schema)
+        sidecar_path = self._db_path / f"{self._collection_name}.meta.json"
 
         if actual_meta is None:
-            # Check sidecar fallback
-            sidecar_path = self._db_path / f"{self._collection_name}.meta.json"
+            # Fallback when Arrow metadata is completely absent
             if sidecar_path.is_file():
                 try:
                     with open(sidecar_path, "r", encoding="utf-8") as f:
@@ -163,8 +163,25 @@ class LancePersistenceManager:
                     f"Existing table '{self._collection_name}' has no embedded IndexMetadata "
                     f"or sidecar metadata. Refusing to operate on an unverified index."
                 )
+        else:
+            # Integrity cross-check: if sidecar also exists, they must not disagree
+            if sidecar_path.is_file():
+                try:
+                    with open(sidecar_path, "r", encoding="utf-8") as f:
+                        sidecar_data = json.load(f)
+                    sidecar_meta = IndexMetadata(**sidecar_data)
+                    if not actual_meta.is_compatible_with(sidecar_meta):
+                        raise StorageError(
+                            f"Metadata integrity conflict in '{self._collection_name}': "
+                            f"Arrow schema metadata ({actual_meta.model_name}, dim={actual_meta.embedding_dimension}) "
+                            f"disagrees with sidecar JSON ({sidecar_meta.model_name}, dim={sidecar_meta.embedding_dimension})."
+                        )
+                except StorageError:
+                    raise
+                except Exception as e:
+                    logger.warning("Could not read sidecar JSON for integrity cross-check: %s", e)
 
-        # Validate complete compatibility
+        # Validate complete compatibility with active expected_metadata
         validate_schema_compatibility(schema, self._expected_metadata)
 
     def get_index_metadata(self) -> IndexMetadata | None:

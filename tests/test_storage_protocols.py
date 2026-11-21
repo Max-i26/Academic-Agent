@@ -116,7 +116,7 @@ def test_store_crud_and_search():
 
     # Search with metadata filter (only Lecture 7)
     filtered_results = store.search(
-        query_vector=[1.0, 1.0, 0.0],
+        query_vector=[0.7071, 0.7071, 0.0],
         top_k=5,
         filters=FilterQuery(source_file="Lecture7.pdf"),
     )

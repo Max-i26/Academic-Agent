@@ -12,6 +12,7 @@ from academic_agent.storage.providers.lancedb.filters import (
     ALLOWED_FILTER_FIELDS,
 )
 from academic_agent.storage.providers.lancedb.persistence import LancePersistenceManager
+from academic_agent.storage.providers.lancedb.store import LanceDBVectorStore
 
 __all__ = [
     "create_lance_schema",
@@ -22,4 +23,5 @@ __all__ = [
     "build_lance_filter",
     "ALLOWED_FILTER_FIELDS",
     "LancePersistenceManager",
+    "LanceDBVectorStore",
 ]

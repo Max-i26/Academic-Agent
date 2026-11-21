@@ -16,6 +16,7 @@ from academic_agent.storage.exceptions import (
     StoreNotInitializedError,
 )
 from academic_agent.storage.mock_store import InMemoryVectorStore
+from academic_agent.storage.providers.lancedb.store import LanceDBVectorStore
 
 __all__ = [
     "VectorRecord",
@@ -30,4 +31,5 @@ __all__ = [
     "DuplicateRecordError",
     "StoreNotInitializedError",
     "InMemoryVectorStore",
+    "LanceDBVectorStore",
 ]

@@ -24,9 +24,11 @@ class InMemoryVectorStore:
         self.allow_overwrite = allow_overwrite
         self._metadata: IndexMetadata | None = None
         self._records: dict[str, VectorRecord] = {}
+        self._is_closed = False
 
     def initialize(self, metadata: IndexMetadata) -> None:
         """Initialize store with index metadata."""
+        self._is_closed = False
         if self._metadata is not None and not self._metadata.is_compatible_with(metadata):
             raise IncompatibleModelError(
                 expected_model=self._metadata.model_name,
@@ -36,9 +38,13 @@ class InMemoryVectorStore:
         self._metadata = metadata
 
     def get_index_metadata(self) -> IndexMetadata | None:
+        if self._is_closed:
+            return None
         return self._metadata
 
     def verify_model_compatibility(self, model_name: str, dimension: int) -> None:
+        if self._is_closed:
+            raise StoreNotInitializedError("Store is closed")
         if self._metadata is None:
             raise StoreNotInitializedError("Store has not been initialized with IndexMetadata")
         if self._metadata.model_name != model_name:
@@ -53,20 +59,30 @@ class InMemoryVectorStore:
             )
 
     def add(self, records: list[VectorRecord]) -> None:
+        if self._is_closed:
+            raise StoreNotInitializedError("Store is closed")
         if not records:
             return
+
         if self._metadata is None:
-            # Auto-initialize with default metadata if not explicitly initialized
             self._metadata = IndexMetadata(
                 model_name=records[0].metadata.get("model_name", "unknown"),
                 embedding_dimension=len(records[0].vector),
             )
 
-        for rec in records:
+        # In-batch deduplication: latest record wins
+        deduped: dict[str, VectorRecord] = {}
+        for r in records:
+            deduped[r.record_id] = r
+
+        for rec in deduped.values():
             if len(rec.vector) != self._metadata.embedding_dimension:
                 raise ValueError(
-                    f"Vector dimension {len(rec.vector)} does not match index dimension {self._metadata.embedding_dimension}"
+                    f"Vector dimension {len(rec.vector)} does not match expected dimension {self._metadata.embedding_dimension}"
                 )
+            arr = np.array(rec.vector, dtype=np.float32)
+            if not np.all(np.isfinite(arr)):
+                raise ValueError("Vector contains non-finite numbers")
             if rec.record_id in self._records and not self.allow_overwrite:
                 raise DuplicateRecordError(f"Record '{rec.record_id}' already exists")
             self._records[rec.record_id] = rec
@@ -74,6 +90,8 @@ class InMemoryVectorStore:
         self._metadata.total_records = len(self._records)
 
     def get(self, record_ids: list[str]) -> list[VectorRecord | None]:
+        if self._is_closed:
+            raise StoreNotInitializedError("Store is closed")
         return [self._records.get(rid) for rid in record_ids]
 
     def search(
@@ -82,17 +100,25 @@ class InMemoryVectorStore:
         top_k: int = 5,
         filters: FilterQuery | dict[str, Any] | None = None,
     ) -> list[SearchResult]:
-        if not self._records:
-            return []
+        if self._is_closed:
+            raise StoreNotInitializedError("Store is closed")
 
         q_vec = np.array(query_vector, dtype=np.float32)
         if self._metadata and len(q_vec) != self._metadata.embedding_dimension:
             raise ValueError(
                 f"Query vector dimension {len(q_vec)} does not match index {self._metadata.embedding_dimension}"
             )
+        if not np.all(np.isfinite(q_vec)):
+            raise ValueError("Query vector contains non-finite numbers")
 
-        # Normalize query if not unit norm
-        norm = np.linalg.norm(q_vec)
+        norm = float(np.linalg.norm(q_vec))
+        if self._metadata and self._metadata.normalized:
+            if norm == 0 or abs(norm - 1.0) > 1e-2:
+                raise ValueError(f"Query vector is not unit normalized (norm={norm:.4f})")
+
+        if top_k <= 0 or not self._records:
+            return []
+
         if norm > 0:
             q_vec = q_vec / norm
 
@@ -113,13 +139,13 @@ class InMemoryVectorStore:
             return []
 
         doc_matrix = np.vstack([c.as_numpy() for c in candidates])
-        # Normalize candidates
         doc_norms = np.linalg.norm(doc_matrix, axis=1, keepdims=True)
         doc_norms[doc_norms == 0] = 1.0
         doc_matrix = doc_matrix / doc_norms
 
         sims = np.dot(doc_matrix, q_vec)
-        ranked_indices = np.argsort(-sims)[:top_k]
+        actual_k = min(top_k, len(candidates))
+        ranked_indices = np.argsort(-sims)[:actual_k]
 
         results: list[SearchResult] = []
         for idx in ranked_indices:
@@ -142,6 +168,8 @@ class InMemoryVectorStore:
         return results
 
     def delete(self, record_ids: list[str]) -> int:
+        if self._is_closed:
+            raise StoreNotInitializedError("Store is closed")
         deleted = 0
         for rid in record_ids:
             if rid in self._records:
@@ -152,12 +180,16 @@ class InMemoryVectorStore:
         return deleted
 
     def delete_by_filter(self, filters: FilterQuery | dict[str, Any]) -> int:
+        if self._is_closed:
+            raise StoreNotInitializedError("Store is closed")
         filter_obj = filters if isinstance(filters, FilterQuery) else FilterQuery(custom_filters=filters)
         to_delete = [rid for rid, rec in self._records.items() if filter_obj.matches(rec)]
         return self.delete(to_delete)
 
     def count(self) -> int:
+        if self._is_closed:
+            raise StoreNotInitializedError("Store is closed")
         return len(self._records)
 
     def close(self) -> None:
-        pass
+        self._is_closed = True
