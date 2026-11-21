@@ -22,6 +22,27 @@ class EvidenceSufficiency(str, Enum):
     INSUFFICIENT = "insufficient"
 
 
+class OmissionReason(str, Enum):
+    """Categorical reason why a candidate evidence item was omitted during context assembly."""
+
+    DUPLICATE = "duplicate"
+    OVERLAPPING = "overlapping"
+    BUDGET_EXCEEDED = "budget_exceeded"
+    INVALID_CANDIDATE = "invalid_candidate"
+
+
+class OmittedCandidate(BaseModel):
+    """Structured audit record of an omitted candidate during context assembly."""
+
+    record_id: str = Field(description="Record ID of the candidate.")
+    chunk_id: str = Field(description="Chunk ID or unit ID of the candidate.")
+    source_file: str = Field(description="Source lecture PDF or document filename.")
+    source_pages: list[int] = Field(default_factory=list, description="Contributing source pages.")
+    reason: OmissionReason = Field(description="Categorical reason why candidate was omitted.")
+    details: str = Field(default="", description="Detailed explanation or threshold metrics for omission.")
+    rank: int = Field(ge=1, description="Original retrieval rank (1-based).")
+
+
 class GroundedEvidence(BaseModel):
     """An individual retrieved evidence item with application-assigned ID and verified provenance."""
 
@@ -80,7 +101,7 @@ class GroundedEvidence(BaseModel):
 class EvidenceContext(BaseModel):
     """Structured evidence package assembled for prompt injection within a token budget.
 
-    'items' is the canonical source of truth. Lookup maps are dynamically derived.
+    'items' is the canonical source of truth. Lookup maps and omission metrics are dynamically derived.
     """
 
     items: list[GroundedEvidence] = Field(
@@ -97,19 +118,41 @@ class EvidenceContext(BaseModel):
         ge=0,
         description="Maximum token budget allocated for evidence.",
     )
-    has_omissions: bool = Field(
-        default=False,
-        description="True if any candidate was omitted due to budget constraints or deduplication.",
-    )
-    dropped_candidates_count: int = Field(
-        default=0,
-        ge=0,
-        description="Count of candidate items omitted during context assembly.",
+    omitted_candidates: list[OmittedCandidate] = Field(
+        default_factory=list,
+        description="Audit record of candidate items omitted during context assembly.",
     )
     is_exact_token_count: bool = Field(
         default=True,
         description="False if heuristic fallback was used for token counting.",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _handle_legacy_omissions(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # If omitted_candidates is not provided but legacy fields are:
+            if "omitted_candidates" not in data:
+                count = data.pop("dropped_candidates_count", 0)
+                has_om = data.pop("has_omissions", False)
+                if count > 0 or has_om:
+                    synth_count = max(count, 1 if has_om else 0)
+                    data["omitted_candidates"] = [
+                        OmittedCandidate(
+                            record_id=f"legacy_dropped_{i+1}",
+                            chunk_id=f"legacy_{i+1}",
+                            source_file="unknown",
+                            source_pages=[],
+                            reason=OmissionReason.BUDGET_EXCEEDED,
+                            details="Legacy dropped candidate placeholder",
+                            rank=i + 1,
+                        )
+                        for i in range(synth_count)
+                    ]
+            else:
+                data.pop("dropped_candidates_count", None)
+                data.pop("has_omissions", None)
+        return data
 
     @model_validator(mode="after")
     def validate_unique_ids(self) -> "EvidenceContext":
@@ -119,6 +162,16 @@ class EvidenceContext(BaseModel):
                 raise ValueError(f"Duplicate evidence_id '{item.evidence_id}' found in EvidenceContext items.")
             seen_ids.add(item.evidence_id)
         return self
+
+    @property
+    def has_omissions(self) -> bool:
+        """True if any candidate was omitted due to budget constraints or deduplication."""
+        return len(self.omitted_candidates) > 0
+
+    @property
+    def dropped_candidates_count(self) -> int:
+        """Count of candidate items omitted during context assembly."""
+        return len(self.omitted_candidates)
 
     @property
     def evidence_lookup(self) -> dict[str, GroundedEvidence]:

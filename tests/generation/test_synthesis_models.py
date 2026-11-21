@@ -10,6 +10,8 @@ from academic_agent.generation.synthesis.models import (
     EvidenceContext,
     EvidenceSufficiency,
     GroundedEvidence,
+    OmissionReason,
+    OmittedCandidate,
     ValidationDiagnostics,
 )
 from academic_agent.generation.synthesis.protocols import (
@@ -155,6 +157,73 @@ class TestEvidenceContext:
         assert ctx.has_omissions is True
         assert ctx.dropped_candidates_count == 3
         assert ctx.is_exact_token_count is False
+
+    def test_explicit_omitted_candidates(self, sample_evidence_1):
+        ge1 = GroundedEvidence(evidence_id="E1", evidence=sample_evidence_1)
+        omitted = [
+            OmittedCandidate(
+                record_id="c2#0",
+                chunk_id="c2",
+                source_file="Lecture_2.pdf",
+                source_pages=[5],
+                reason=OmissionReason.BUDGET_EXCEEDED,
+                details="Budget exhausted",
+                rank=2,
+            ),
+            OmittedCandidate(
+                record_id="c3#0",
+                chunk_id="c3",
+                source_file="Lecture_3.pdf",
+                source_pages=[12],
+                reason=OmissionReason.DUPLICATE,
+                details="Identical record",
+                rank=3,
+            ),
+        ]
+        ctx = EvidenceContext(
+            items=[ge1],
+            budget_allocated=500,
+            omitted_candidates=omitted,
+            is_exact_token_count=True,
+        )
+        assert ctx.has_omissions is True
+        assert ctx.dropped_candidates_count == 2
+        assert ctx.omitted_candidates == omitted
+        assert ctx.omitted_candidates[0].reason == OmissionReason.BUDGET_EXCEEDED
+        assert ctx.omitted_candidates[1].reason == OmissionReason.DUPLICATE
+
+
+class TestOmissionModels:
+    """Verify OmissionReason enum values and OmittedCandidate structure."""
+
+    def test_omission_reasons(self):
+        assert OmissionReason.DUPLICATE == "duplicate"
+        assert OmissionReason.OVERLAPPING == "overlapping"
+        assert OmissionReason.BUDGET_EXCEEDED == "budget_exceeded"
+        assert OmissionReason.INVALID_CANDIDATE == "invalid_candidate"
+
+    def test_omitted_candidate_validation(self):
+        cand = OmittedCandidate(
+            record_id="rec_1",
+            chunk_id="chunk_1",
+            source_file="Lecture_4.pdf",
+            source_pages=[10, 11],
+            reason=OmissionReason.OVERLAPPING,
+            details="Shingle overlap 90%",
+            rank=4,
+        )
+        assert cand.record_id == "rec_1"
+        assert cand.rank == 4
+        assert cand.reason == OmissionReason.OVERLAPPING
+
+        with pytest.raises(ValidationError):
+            OmittedCandidate(
+                record_id="rec_1",
+                chunk_id="chunk_1",
+                source_file="Lecture_4.pdf",
+                reason=OmissionReason.DUPLICATE,
+                rank=0,  # ge=1 constraint
+            )
 
 
 class TestCitationOccurrence:
