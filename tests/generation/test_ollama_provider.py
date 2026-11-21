@@ -121,3 +121,42 @@ class TestOllamaProvider:
         with patch("urllib.request.urlopen", return_value=make_mock_http_response(200, {})):
             provider.release()
             assert provider.is_loaded is False
+
+    def test_generate_passes_num_ctx_option(self):
+        """OllamaProvider must pass num_ctx in options matching context_window."""
+        provider = OllamaProvider(model_name="qwen2.5:1.5b", context_window=4096)
+        mock_response = {
+            "model": "qwen2.5:1.5b",
+            "message": {"role": "assistant", "content": "Answer"},
+            "done": True,
+            "done_reason": "stop",
+            "total_duration": 100_000_000,
+            "prompt_eval_count": 5,
+            "eval_count": 5,
+        }
+
+        captured_requests = []
+        def fake_urlopen(req, timeout=None):
+            captured_requests.append(req)
+            return make_mock_http_response(200, mock_response)
+
+        with patch.object(OllamaProvider, "is_available", True):
+            with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+                messages = [ChatMessage(role=MessageRole.USER, content="Hello")]
+                provider.generate(messages)
+
+        assert len(captured_requests) == 1
+        body = json.loads(captured_requests[0].data.decode("utf-8"))
+        assert "options" in body
+        assert body["options"].get("num_ctx") == 4096
+
+    def test_generate_estimated_context_exceeded_error(self):
+        """OllamaProvider must raise ContextLengthExceededError when prompt exceeds context_window."""
+        from academic_agent.generation.models import ContextLengthExceededError
+        provider = OllamaProvider(model_name="qwen2.5:1.5b", context_window=100)
+
+        with patch.object(OllamaProvider, "is_available", True):
+            # 1000 characters is ~333 tokens, exceeding context window of 100
+            huge_messages = [ChatMessage(role=MessageRole.USER, content="A" * 1000)]
+            with pytest.raises(ContextLengthExceededError, match="Estimated prompt tokens"):
+                provider.generate(huge_messages)

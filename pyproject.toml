@@ -13,9 +13,26 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+embeddings = [
+    "sentence-transformers>=3.0.0",
+    "numpy>=1.24.0",
+]
+storage = [
+    "lancedb>=0.17.0",
+    "pyarrow>=14.0.0",
+]
+local-llm = [
+    "torch>=2.0.0",
+    "transformers>=4.40.0",
+    "accelerate>=0.28.0",
+    "bitsandbytes>=0.43.0",
+]
 dev = [
     "pytest==9.2.0",
-    "pytest-cov>=6,<8"
+    "pytest-cov>=6,<8",
+]
+all = [
+    "academic-agent[embeddings,storage,local-llm,dev]",
 ]
 
 [tool.setuptools.packages.find]

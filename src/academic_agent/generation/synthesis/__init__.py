@@ -29,6 +29,7 @@ from academic_agent.generation.synthesis.prompt.grounding_prompt_builder import 
 )
 from academic_agent.generation.synthesis.validation.answer_policy_validator import AnswerPolicyValidator
 from academic_agent.generation.synthesis.validation.citation_validator import CitationValidator
+from academic_agent.generation.synthesis.sufficiency.assessor import DeterministicSufficiencyAssessor
 from academic_agent.generation.synthesis.synthesizer import AcademicSynthesizer
 
 __all__ = [
@@ -56,4 +57,5 @@ __all__ = [
     "CitationValidator",
     "AnswerPolicyValidator",
     "AcademicSynthesizer",
+    "DeterministicSufficiencyAssessor",
 ]

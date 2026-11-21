@@ -286,7 +286,18 @@ class HuggingFaceTransformersProvider(BaseLLMProvider):
             )
 
         budget_remaining = self.context_window - prompt_tokens
+        if budget_remaining < 1:
+            raise ContextLengthExceededError(
+                f"No token budget remaining for generation (prompt_tokens={prompt_tokens}, context_window={self.context_window})."
+            )
+
         actual_max_new_tokens = min(config.max_new_tokens, budget_remaining)
+        completion_clipped = actual_max_new_tokens < config.max_new_tokens
+        if completion_clipped:
+            logger.warning(
+                f"Requested max_new_tokens ({config.max_new_tokens}) exceeds remaining context budget "
+                f"({budget_remaining}). Generation ceiling clipped to {actual_max_new_tokens} tokens."
+            )
 
         # 3. Configure stopping criteria
         stopping_criteria = None
@@ -369,6 +380,7 @@ class HuggingFaceTransformersProvider(BaseLLMProvider):
             "model_name": self.model_name,
             "quantization": self.loading_config.quantization,
             "torch_dtype": self.loading_config.torch_dtype,
+            "completion_budget_clipped": completion_clipped,
         }
 
         if self._resolved_device == "cuda" and torch.cuda.is_available():

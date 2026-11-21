@@ -237,3 +237,19 @@ class TestHuggingFaceTransformersProviderMocked:
             assert provider.is_available is False
             with pytest.raises(ProviderUnavailableError, match="CUDA device requested but torch.cuda.is_available"):
                 provider.load()
+
+    def test_completion_budget_clipped_metadata(self):
+        """HF provider sets completion_budget_clipped=True when max_new_tokens is clipped by remaining context."""
+        tokenizer = MockTokenizer()
+        model = MockModel(generated_tokens=[101, 102])
+        # Context window 512, prompt has ~300 tokens (1200 chars // 4)
+        cfg = ModelLoadingConfig(model_name="mock-hf/clip-test", device="cpu", context_window=512)
+        provider = HuggingFaceTransformersProvider(loading_config=cfg, tokenizer=tokenizer, model=model)
+
+        # 1200 chars -> 300 prompt tokens. Budget remaining = 212 tokens.
+        messages = [ChatMessage(role=MessageRole.USER, content="A" * 1200)]
+        # Request 400 new tokens, which exceeds 212 remaining
+        config = LLMConfig(max_new_tokens=400)
+        resp = provider.generate(messages, config=config)
+
+        assert resp.metadata["completion_budget_clipped"] is True

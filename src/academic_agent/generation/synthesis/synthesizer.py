@@ -38,6 +38,9 @@ from academic_agent.generation.synthesis.validation.answer_policy_validator impo
 from academic_agent.generation.synthesis.validation.citation_validator import (
     CitationValidator,
 )
+from academic_agent.generation.synthesis.sufficiency.assessor import (
+    DeterministicSufficiencyAssessor,
+)
 from academic_agent.retrieval.models import RetrievalResponse
 
 
@@ -79,7 +82,11 @@ class AcademicSynthesizer:
         self.prompt_builder = prompt_builder or GroundingPromptBuilder()
         self.citation_validator = citation_validator or CitationValidator()
         self.policy_validator = policy_validator or AnswerPolicyValidator()
-        self.sufficiency_assessor = sufficiency_assessor
+        self.sufficiency_assessor = (
+            sufficiency_assessor
+            if sufficiency_assessor is not None
+            else DeterministicSufficiencyAssessor()
+        )
         self.default_evidence_budget = default_evidence_budget
 
     def synthesize(
@@ -117,11 +124,27 @@ class AcademicSynthesizer:
             )
 
         # 3. Assemble budgeted evidence context
-        budget = (
-            allocated_evidence_tokens
-            if allocated_evidence_tokens is not None
-            else self.default_evidence_budget
-        )
+        provider_ctx = self.llm_provider.context_window
+        max_gen_tokens = config.max_new_tokens if (config and config.max_new_tokens is not None) else 512
+        safety_margin = 64
+
+        if allocated_evidence_tokens is not None:
+            budget = allocated_evidence_tokens
+        else:
+            sys_prompt_text = getattr(self.prompt_builder, "system_prompt", "")
+            sys_tokens, _ = self.prompt_builder.estimate_tokens(sys_prompt_text)
+            q_tokens, _ = self.prompt_builder.estimate_tokens(query)
+            # Dynamic available evidence budget:
+            # B_e = max(0, min(B_max, C - T_s - T_q - T_g - M))
+            computed_budget = max(
+                0,
+                min(
+                    self.default_evidence_budget,
+                    provider_ctx - sys_tokens - q_tokens - max_gen_tokens - safety_margin,
+                ),
+            )
+            budget = computed_budget
+
         evidence_context = self.context_builder.build_context(
             retrieval_response=retrieval_response,
             allocated_evidence_tokens=budget,
@@ -130,18 +153,28 @@ class AcademicSynthesizer:
         # 4. Determine evidence sufficiency
         if sufficiency is not None:
             assessed_sufficiency = sufficiency
-        elif self.sufficiency_assessor is not None:
-            assessed_sufficiency = self.sufficiency_assessor.assess(query, evidence_context)
         elif evidence_context.count == 0:
             assessed_sufficiency = EvidenceSufficiency.INSUFFICIENT
+        elif self.sufficiency_assessor is not None:
+            assessed_sufficiency = self.sufficiency_assessor.assess(query, evidence_context)
         else:
             assessed_sufficiency = EvidenceSufficiency.UNKNOWN
 
         # 5. Build chat messages (propagates ContextLengthExceededError if ceiling exceeded)
-        messages = self.prompt_builder.build_messages(
-            query=query,
-            context=evidence_context,
-        )
+        max_prompt_budget = max(0, provider_ctx - max_gen_tokens)
+        prev_max_prompt_tokens = getattr(self.prompt_builder, "max_prompt_tokens", None)
+        try:
+            if hasattr(self.prompt_builder, "max_prompt_tokens"):
+                if prev_max_prompt_tokens is None or prev_max_prompt_tokens > max_prompt_budget:
+                    self.prompt_builder.max_prompt_tokens = max_prompt_budget
+
+            messages = self.prompt_builder.build_messages(
+                query=query,
+                context=evidence_context,
+            )
+        finally:
+            if hasattr(self.prompt_builder, "max_prompt_tokens"):
+                self.prompt_builder.max_prompt_tokens = prev_max_prompt_tokens
 
         # 6. Generate LLM completion (propagates provider exceptions directly)
         raw_response = self.llm_provider.generate(

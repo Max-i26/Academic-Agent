@@ -533,3 +533,48 @@ class TestQualityChecksAndRobustness:
         assert ans3.evidence_context.count == 0
         assert ans3.evidence_context.evidence_ids == []
         assert ans3.policy_outcome == PolicyOutcome.COMPLIANT_ABSTENTION
+
+    def test_dynamic_evidence_budgeting_respects_provider_context(self, sample_retrieval_response):
+        """Synthesizer computes available evidence budget dynamically from provider context_window."""
+        # Using a compact prompt to fit inside small 700 token window
+        compact_prompt_builder = GroundingPromptBuilder(
+            system_prompt="You are a concise academic assistant."
+        )
+        small_mock = MockLLMProvider(
+            context_window=700,
+            default_response="Weak stationarity has constant mean [E1].",
+        )
+        synthesizer = AcademicSynthesizer(
+            llm_provider=small_mock,
+            prompt_builder=compact_prompt_builder,
+            default_evidence_budget=1500,
+        )
+
+        # Provider context is 700, max_new_tokens=100.
+        # Synthesizer evidence budget is dynamically computed: <= 700 - overhead - 100 - 64 < 500 tokens
+        answer = synthesizer.synthesize(
+            query="What is weak stationarity?",
+            retrieval_response=sample_retrieval_response,
+            config=LLMConfig(max_new_tokens=100),
+            sufficiency=EvidenceSufficiency.SUFFICIENT,
+        )
+
+        assert answer.evidence_context.budget_allocated < 600
+        assert answer.evidence_context.total_tokens <= answer.evidence_context.budget_allocated
+
+    def test_automated_sufficiency_assessor_invoked_when_none_provided(self, sample_retrieval_response):
+        """When sufficiency is None, synthesizer uses DeterministicSufficiencyAssessor to classify evidence."""
+        mock_provider = MockLLMProvider(
+            default_response="Weak stationarity requires constant mean and autocovariance [E1]."
+        )
+        synthesizer = AcademicSynthesizer(llm_provider=mock_provider)
+
+        # Retrieval response contains weak stationarity evidence, query matches -> SUFFICIENT
+        answer = synthesizer.synthesize(
+            query="Explain weak stationarity in time series.",
+            retrieval_response=sample_retrieval_response,
+            sufficiency=None,  # Not provided, must be auto-assessed
+        )
+
+        assert answer.evidence_sufficiency == EvidenceSufficiency.SUFFICIENT
+        assert answer.policy_outcome == PolicyOutcome.ANSWERED

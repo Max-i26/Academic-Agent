@@ -122,10 +122,18 @@ class OllamaProvider(BaseLLMProvider):
         """Execute chat completion via Ollama /api/chat endpoint."""
         formatted_messages = [{"role": msg.role.value, "content": msg.content} for msg in messages]
 
+        total_prompt_chars = sum(len(m.content) for m in messages)
+        est_min_prompt_tokens = max(1, int(total_prompt_chars / 3.0))
+        if est_min_prompt_tokens > self._context_window:
+            raise ContextLengthExceededError(
+                f"Estimated prompt tokens ({est_min_prompt_tokens}) exceed Ollama context window ({self._context_window})."
+            )
+
         options: dict[str, Any] = {
             "temperature": config.temperature,
             "top_p": config.top_p,
             "num_predict": config.max_new_tokens,
+            "num_ctx": self._context_window,
         }
         if config.stop_sequences:
             options["stop"] = config.stop_sequences
