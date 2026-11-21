@@ -141,7 +141,17 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
             if trace.transitions
             else (trace.refusal_explanation or "Execution concluded.")
         )
+        status_map = {
+            AgentTerminalState.TERMINATED_SUCCESS.value: ServiceRunStatus.COMPLETED,
+            AgentTerminalState.TERMINATED_ABSTENTION.value: ServiceRunStatus.ABSTENTION,
+            AgentTerminalState.TERMINATED_BUDGET_EXCEEDED.value: ServiceRunStatus.BUDGET_EXCEEDED,
+            AgentTerminalState.TERMINATED_CANCELLED.value: ServiceRunStatus.CANCELLED,
+            AgentTerminalState.TERMINATED_ERROR.value: ServiceRunStatus.ERROR,
+        }
+        status_val = status_map.get(trace.terminal_state, ServiceRunStatus.ERROR).value
+
         payload: Dict[str, Any] = {
+            "status": status_val,
             "terminal_state": trace.terminal_state,
             "terminal_reason": terminal_reason,
             "total_steps": len(trace.steps),
@@ -316,14 +326,14 @@ class AcademicAgentService:
         with self._lock:
             return self._completed_runs.get(run_id)
 
-    def list_runs(self, limit: int = 50) -> List[RunSummary]:
+    def list_runs(self, limit: int = 50, offset: int = 0) -> List[RunSummary]:
         """List summaries of recent execution runs ordered by recency."""
         with self._lock:
             # Active runs first, then completed runs newest to oldest
             results = list(self._active_runs.values())
             completed = list(reversed(self._run_summaries.values()))
             results.extend(completed)
-            return results[:limit]
+            return results[offset : offset + limit]
 
     def _build_agent_config(self, request: QueryRequest) -> AgentRunConfig:
         """Construct AgentRunConfig applying optional overrides from QueryRequest."""

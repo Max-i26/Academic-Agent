@@ -30,6 +30,6 @@ class AgentServiceProtocol(Protocol):
         """Retrieve the response of a completed or active run by ID."""
         ...
 
-    def list_runs(self, limit: int = 50) -> List[RunSummary]:
+    def list_runs(self, limit: int = 50, offset: int = 0) -> List[RunSummary]:
         """List summaries of recent execution runs ordered by recency."""
         ...
