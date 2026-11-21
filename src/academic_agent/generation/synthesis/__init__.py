@@ -20,6 +20,10 @@ from academic_agent.generation.synthesis.protocols import (
 )
 from academic_agent.generation.synthesis.context.evidence_context_builder import EvidenceContextBuilder
 from academic_agent.generation.synthesis.context.evidence_formatter import EvidenceFormatter
+from academic_agent.generation.synthesis.prompt.grounding_prompt_builder import (
+    DEFAULT_SYSTEM_PROMPT,
+    GroundingPromptBuilder,
+)
 
 __all__ = [
     "EvidenceSufficiency",
@@ -38,4 +42,6 @@ __all__ = [
     "AcademicSynthesizerProtocol",
     "EvidenceFormatter",
     "EvidenceContextBuilder",
+    "GroundingPromptBuilder",
+    "DEFAULT_SYSTEM_PROMPT",
 ]
