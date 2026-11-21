@@ -144,8 +144,8 @@ class TestRequiredIntegrationScenarios:
         assert '<evidence id="E2"' in messages[1].content
 
         # 4. Citations & resolution
-        assert answer.validation.valid_cited_ids == ["E1", "E2"]
-        assert answer.validation.invalid_cited_ids == []
+        assert answer.validation.valid_cited_ids == ("E1", "E2")
+        assert answer.validation.invalid_cited_ids == ()
         assert answer.has_valid_citation_integrity is True
         assert "[Lecture 4, p. 18]" in answer.resolved_answer_text
         assert "[Lecture 5, p. 12]" in answer.resolved_answer_text
@@ -197,7 +197,7 @@ class TestRequiredIntegrationScenarios:
         assert answer.policy_outcome == PolicyOutcome.PARTIAL_ANSWER
         assert answer.is_policy_compliant is True
         assert answer.policy_result.has_gap_statement is True
-        assert answer.validation.valid_cited_ids == ["E1"]
+        assert answer.validation.valid_cited_ids == ("E1",)
         assert "[Lecture 4, p. 18]" in answer.resolved_answer_text
         assert "[E1]" not in answer.resolved_answer_text
 
@@ -254,8 +254,8 @@ class TestRequiredIntegrationScenarios:
             sufficiency=EvidenceSufficiency.SUFFICIENT,
         )
 
-        assert answer.validation.valid_cited_ids == ["E1"]
-        assert answer.validation.invalid_cited_ids == ["E99"]
+        assert answer.validation.valid_cited_ids == ("E1",)
+        assert answer.validation.invalid_cited_ids == ("E99",)
         assert answer.has_valid_citation_integrity is False
         assert answer.policy_outcome == PolicyOutcome.UNSUPPORTED_ANSWER
         assert answer.is_policy_compliant is False
@@ -362,7 +362,7 @@ class TestAdditionalEssentialScenarios:
         assert len(answer.evidence_context.omitted_candidates) == 1
         assert answer.evidence_context.omitted_candidates[0].omission_reason == OmissionReason.BUDGET_EXCEEDED
         assert "E2" not in answer.evidence_context.evidence_ids
-        assert answer.evidence_context.evidence_ids == ["E1"]
+        assert answer.evidence_context.evidence_ids == ("E1",)
 
         # Prompt must only contain accepted evidence E1
         messages, _ = mock_provider.calls[0]
@@ -384,7 +384,7 @@ class TestAdditionalEssentialScenarios:
         )
 
         # Both recognized
-        assert answer.validation.valid_cited_ids == ["E1", "E2"]
+        assert answer.validation.valid_cited_ids == ("E1", "E2")
         # Grouped replacement executed cleanly exactly once
         assert answer.resolved_answer_text == (
             "The time series properties are comprehensively analyzed in [Lecture 4, p. 18; Lecture 5, p. 12]."
@@ -406,8 +406,8 @@ class TestAdditionalEssentialScenarios:
             sufficiency=EvidenceSufficiency.SUFFICIENT,
         )
 
-        assert answer.validation.valid_cited_ids == ["E1"]
-        assert answer.validation.invalid_cited_ids == ["E99"]
+        assert answer.validation.valid_cited_ids == ("E1",)
+        assert answer.validation.invalid_cited_ids == ("E99",)
         assert answer.has_valid_citation_integrity is False
         assert answer.resolved_answer_text == "The methodology is detailed in [Lecture 4, p. 18; E99]."
         assert answer.policy_outcome == PolicyOutcome.UNSUPPORTED_ANSWER
@@ -425,7 +425,7 @@ class TestAdditionalEssentialScenarios:
             sufficiency=EvidenceSufficiency.UNKNOWN,
         )
 
-        assert answer.validation.valid_cited_ids == ["E1"]
+        assert answer.validation.valid_cited_ids == ("E1",)
         assert answer.has_valid_citation_integrity is True
         # Must be INDETERMINATE, protecting the distinction between citation integrity and sufficiency
         assert answer.policy_outcome == PolicyOutcome.INDETERMINATE
@@ -531,7 +531,7 @@ class TestQualityChecksAndRobustness:
         )
 
         assert ans3.evidence_context.count == 0
-        assert ans3.evidence_context.evidence_ids == []
+        assert ans3.evidence_context.evidence_ids == ()
         assert ans3.policy_outcome == PolicyOutcome.COMPLIANT_ABSTENTION
 
     def test_dynamic_evidence_budgeting_respects_provider_context(self, sample_retrieval_response):

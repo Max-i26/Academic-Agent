@@ -9,9 +9,22 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_valid
 from academic_agent.generation.synthesis.models import AcademicAnswer
 
 
+def _is_deeply_immutable(obj: Any) -> bool:
+    """Check if an object and all its nested members are completely immutable."""
+    if isinstance(obj, (int, float, str, bool, bytes, type(None), MappingProxyType, frozenset)):
+        return True
+    if isinstance(obj, tuple):
+        return all(_is_deeply_immutable(x) for x in obj)
+    if isinstance(obj, BaseModel):
+        if not getattr(obj, "model_config", {}).get("frozen", False):
+            return False
+        return all(_is_deeply_immutable(v) for k, v in obj.__dict__.items() if not k.startswith("_"))
+    return False
+
+
 def freeze_data(val: Any) -> Any:
     """Recursively freeze nested mappings and collections into deeply immutable types."""
-    if isinstance(val, (MappingProxyType, frozenset, int, float, str, bool, bytes, type(None))):
+    if _is_deeply_immutable(val):
         return val
     if isinstance(val, Mapping):
         return MappingProxyType({k: freeze_data(v) for k, v in val.items()})
@@ -20,7 +33,7 @@ def freeze_data(val: Any) -> Any:
     if isinstance(val, (set, frozenset)):
         return frozenset(freeze_data(x) for x in val)
     if isinstance(val, BaseModel):
-        if getattr(val, "model_config", {}).get("frozen", False):
+        if _is_deeply_immutable(val):
             return val
         return MappingProxyType({k: freeze_data(v) for k, v in val.model_dump().items()})
     if hasattr(val, "__dict__"):

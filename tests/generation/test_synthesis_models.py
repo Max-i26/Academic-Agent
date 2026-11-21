@@ -188,7 +188,7 @@ class TestEvidenceContext:
         )
         assert ctx.has_omissions is True
         assert ctx.dropped_candidates_count == 2
-        assert ctx.omitted_candidates == omitted
+        assert ctx.omitted_candidates == tuple(omitted)
         assert ctx.omitted_candidates[0].reason == OmissionReason.BUDGET_EXCEEDED
         assert ctx.omitted_candidates[1].reason == OmissionReason.DUPLICATE
 
@@ -265,14 +265,14 @@ class TestValidationDiagnostics:
 
     def test_empty_diagnostics_defaults(self):
         diag = ValidationDiagnostics()
-        assert diag.citations == []
-        assert diag.valid_cited_ids == []
-        assert diag.invalid_cited_ids == []
-        assert diag.uncited_evidence_ids == []
-        assert diag.malformed_citations == []
+        assert diag.citations == ()
+        assert diag.valid_cited_ids == ()
+        assert diag.invalid_cited_ids == ()
+        assert diag.uncited_evidence_ids == ()
+        assert diag.malformed_citations == ()
         assert diag.refusal_detected is False
         assert diag.evidence_sufficiency == EvidenceSufficiency.UNKNOWN
-        assert diag.cited_ids == []
+        assert diag.cited_ids == ()
 
     def test_ordered_unique_cited_ids(self):
         c1 = CitationOccurrence(evidence_id="E1", raw_citation="[E1]", start_char=0, end_char=4, is_valid=True)
@@ -280,7 +280,7 @@ class TestValidationDiagnostics:
         c3 = CitationOccurrence(evidence_id="E1", raw_citation="[E1]", start_char=20, end_char=24, is_valid=True)
 
         diag = ValidationDiagnostics(citations=[c1, c2, c3], valid_cited_ids=["E1", "E2"])
-        assert diag.cited_ids == ["E1", "E2"]
+        assert diag.cited_ids == ("E1", "E2")
 
 
 class TestAcademicAnswer:

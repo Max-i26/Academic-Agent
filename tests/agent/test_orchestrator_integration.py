@@ -797,6 +797,20 @@ class TestOrchestratorAdversarialAndConcurrency:
         with pytest.raises((Exception, TypeError)):
             trace.final_answer.answer_text = "MUTATED_ANSWER"  # type: ignore
 
+        # Level 6: Nested collection mutation on final_answer sub-models
+        assert isinstance(trace.final_answer.validation.citations, tuple)
+        with pytest.raises(AttributeError):
+            trace.final_answer.validation.citations.append("MUTATION")  # type: ignore
+
+        assert trace.final_answer.policy_result is not None
+        assert isinstance(trace.final_answer.policy_result.warnings, tuple)
+        with pytest.raises(AttributeError):
+            trace.final_answer.policy_result.warnings.append("MUTATION")  # type: ignore
+
+        assert isinstance(trace.final_answer.evidence_context.items, tuple)
+        with pytest.raises(AttributeError):
+            trace.final_answer.evidence_context.items.append("MUTATION")  # type: ignore
+
     def test_synthesis_policy_outcome_unsupported_answer_abstains(self) -> None:
         """Verify that synthesis with UNSUPPORTED_ANSWER transitions to TERMINATED_ABSTENTION."""
         resp_1 = json.dumps({
@@ -825,6 +839,96 @@ class TestOrchestratorAdversarialAndConcurrency:
         assert "unsupported" in (trace.refusal_explanation or "").lower()
         assert trace.transitions[-1].reason == "unsupported claims"
         assert trace.final_answer is not None
+
+    def test_synthesis_missing_policy_outcome_fails_with_error(self) -> None:
+        """Verify that synthesis missing an authoritative PolicyOutcome terminates as ERROR, never succeeds."""
+        class NoneOutcomeSynthesizerTool(MockAcademicSynthesizerTool):
+            def execute(self, arguments: dict) -> ToolResult:
+                res = super().execute(arguments)
+                ans = res.output["academic_answer"]
+                ans_no_policy = ans.model_copy(update={"policy_result": None})
+                return ToolResult(
+                    call_id="call_syn",
+                    tool_name="academic_synthesizer",
+                    success=True,
+                    output={
+                        "answer_text": ans_no_policy.resolved_answer_text,
+                        "raw_answer": ans_no_policy.answer_text,
+                        "is_valid_academic_answer": True,
+                        "academic_answer": ans_no_policy,
+                    },
+                )
+
+        resp_1 = json.dumps({
+            "action_rationale": "Search.",
+            "decision_summary": "Search.",
+            "action_type": "SEARCH",
+            "tool_call": {"call_id": "c1", "tool_name": "academic_search", "arguments": {"query": "test"}},
+        })
+        resp_2 = json.dumps({
+            "action_rationale": "Synthesize.",
+            "decision_summary": "Synthesize.",
+            "action_type": "SYNTHESIZE",
+            "tool_call": {"call_id": "c2", "tool_name": "academic_synthesizer", "arguments": {"query": "test"}},
+        })
+
+        provider = MockLLMProvider([resp_1, resp_2])
+        registry = ToolRegistry()
+        registry.register(MockAcademicSearchTool())
+        registry.register(NoneOutcomeSynthesizerTool())
+
+        planner = ReActStepPlanner(llm_provider=provider)
+        agent = AcademicAgent(tool_registry=registry, planner=planner)
+
+        trace = agent.run("Explain eigenvalues.")
+        assert trace.terminal_state == AgentTerminalState.TERMINATED_ERROR.value
+        assert "Authoritative PolicyOutcome missing" in (trace.refusal_explanation or "")
+
+    def test_synthesis_answered_without_valid_citations_fails_with_error(self) -> None:
+        """Verify that an answered claim lacking valid citation integrity fails as ERROR."""
+        class ZeroCitationsSynthesizerTool(MockAcademicSynthesizerTool):
+            def execute(self, arguments: dict) -> ToolResult:
+                res = super().execute(arguments)
+                ans = res.output["academic_answer"]
+                # Zero valid citations and zero invalid citations -> has_valid_citation_integrity is False
+                diag = ans.validation.model_copy(update={"citations": (), "valid_cited_ids": ()})
+                ans_zero = ans.model_copy(update={"validation": diag})
+                return ToolResult(
+                    call_id="call_syn",
+                    tool_name="academic_synthesizer",
+                    success=True,
+                    output={
+                        "answer_text": ans_zero.resolved_answer_text,
+                        "raw_answer": ans_zero.answer_text,
+                        "is_valid_academic_answer": True,
+                        "academic_answer": ans_zero,
+                    },
+                )
+
+        resp_1 = json.dumps({
+            "action_rationale": "Search.",
+            "decision_summary": "Search.",
+            "action_type": "SEARCH",
+            "tool_call": {"call_id": "c1", "tool_name": "academic_search", "arguments": {"query": "test"}},
+        })
+        resp_2 = json.dumps({
+            "action_rationale": "Synthesize.",
+            "decision_summary": "Synthesize.",
+            "action_type": "SYNTHESIZE",
+            "tool_call": {"call_id": "c2", "tool_name": "academic_synthesizer", "arguments": {"query": "test"}},
+        })
+
+        provider = MockLLMProvider([resp_1, resp_2])
+        registry = ToolRegistry()
+        registry.register(MockAcademicSearchTool())
+        registry.register(ZeroCitationsSynthesizerTool())
+
+        planner = ReActStepPlanner(llm_provider=provider)
+        agent = AcademicAgent(tool_registry=registry, planner=planner)
+
+        trace = agent.run("Explain eigenvalues.")
+        assert trace.terminal_state == AgentTerminalState.TERMINATED_ERROR.value
+        assert trace.transitions[-1].reason == "citation integrity check failed"
 
     def test_synthesis_policy_outcome_contradictory_refusal_errors(self) -> None:
         """Verify that synthesis with CONTRADICTORY_REFUSAL transitions to TERMINATED_ERROR."""
@@ -883,7 +987,7 @@ class TestOrchestratorAdversarialAndConcurrency:
         assert trace.final_answer is not None
 
     def test_planner_preflight_token_budget_clamping(self) -> None:
-        """Verify that ReActStepPlanner clamps max_new_tokens based on remaining budget headroom."""
+        """Verify that ReActStepPlanner strictly clamps max_new_tokens and rejects sub-viable budgets before generation."""
         captured_configs: List[LLMConfig] = []
 
         class RecordingLLMProvider:
@@ -915,10 +1019,10 @@ class TestOrchestratorAdversarialAndConcurrency:
             def release(self) -> None: pass
 
         provider = RecordingLLMProvider()
-        budget_cfg = BudgetConfig(max_total_tokens=500)
+        budget_cfg = BudgetConfig(max_total_tokens=3000)
         tracker = ExecutionBudgetTracker(config=budget_cfg)
-        # Consume 380 tokens so remaining tokens = 120
-        tracker.record_tokens(prompt=300, completion=80, is_exact=True)
+        # Consume 1200 tokens so remaining total = 1800
+        tracker.record_tokens(prompt=1000, completion=200, is_exact=True)
 
         planner = ReActStepPlanner(llm_provider=provider, max_tokens=1024)
         action = planner.plan_next_step(
@@ -930,10 +1034,11 @@ class TestOrchestratorAdversarialAndConcurrency:
 
         assert action.action_type == ActionType.FINISH
         assert len(captured_configs) == 1
-        # max_tokens was 1024, but headroom was 120 -> clamped to 120
-        assert captured_configs[0].max_new_tokens == 120
+        # max_tokens was 1024, but remaining headroom after prompt was clamped below 1024
+        assert captured_configs[0].max_new_tokens < 1024
+        assert captured_configs[0].max_new_tokens > 0
 
-        # Now test minimum clamping floor (16) when headroom is very low (e.g. 5 tokens left)
+        # Now test sub-viable headroom: remaining budget is 5 tokens -> must ABSTAIN WITHOUT invoking provider
         captured_configs.clear()
         tracker2 = ExecutionBudgetTracker(config=BudgetConfig(max_total_tokens=100))
         tracker2.record_tokens(prompt=80, completion=15, is_exact=True)  # 5 tokens left
@@ -944,7 +1049,7 @@ class TestOrchestratorAdversarialAndConcurrency:
             available_tools=[],
             budget_tracker=tracker2,
         )
-        assert len(captured_configs) == 1
-        # remaining was 5, floor is 16 -> max(16, min(1024, 5)) == 16
-        assert captured_configs[0].max_new_tokens == 16
+        # Provider was NEVER invoked
+        assert len(captured_configs) == 0
         assert action2.action_type == ActionType.ABSTAIN
+        assert "insufficient token budget headroom" in (action2.refusal_reason or "").lower()

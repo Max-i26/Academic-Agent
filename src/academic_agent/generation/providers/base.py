@@ -106,7 +106,7 @@ class BaseLLMProvider(ABC, LLMProviderProtocol):
         elapsed_ms = (time.perf_counter() - t_start) * 1000.0
 
         if response.latency_ms <= 0.0:
-            response.latency_ms = elapsed_ms
+            response = response.model_copy(update={"latency_ms": elapsed_ms})
 
         if self._on_end is not None:
             self._on_end(response)

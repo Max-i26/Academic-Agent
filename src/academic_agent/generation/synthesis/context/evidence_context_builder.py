@@ -206,7 +206,8 @@ class EvidenceContextBuilder(EvidenceContextBuilderProtocol):
                             is_truncated=acc_item.is_truncated,
                         )
                         item_xml = self.formatter.format_item(updated_ge)
-                        updated_ge.token_count, c_exact = self.count_tokens(item_xml)
+                        cnt, c_exact = self.count_tokens(item_xml)
+                        updated_ge = updated_ge.model_copy(update={"token_count": cnt})
                         if not c_exact:
                             is_exact = False
 
@@ -285,7 +286,8 @@ class EvidenceContextBuilder(EvidenceContextBuilderProtocol):
                         is_truncated=acc_item.is_truncated,
                     )
                     item_xml = self.formatter.format_item(updated_ge)
-                    updated_ge.token_count, c_exact = self.count_tokens(item_xml)
+                    cnt, c_exact = self.count_tokens(item_xml)
+                    updated_ge = updated_ge.model_copy(update={"token_count": cnt})
                     if not c_exact:
                         is_exact = False
 
@@ -374,7 +376,8 @@ class EvidenceContextBuilder(EvidenceContextBuilderProtocol):
                             is_truncated=acc_item.is_truncated,
                         )
                         item_xml = self.formatter.format_item(updated_ge)
-                        updated_ge.token_count, c_exact = self.count_tokens(item_xml)
+                        cnt, c_exact = self.count_tokens(item_xml)
+                        updated_ge = updated_ge.model_copy(update={"token_count": cnt})
                         if not c_exact:
                             is_exact = False
 
@@ -438,7 +441,8 @@ class EvidenceContextBuilder(EvidenceContextBuilderProtocol):
             if tentative_tokens <= allocated_evidence_tokens:
                 # Candidate fits safely within budget
                 item_xml = self.formatter.format_item(tentative_ge)
-                tentative_ge.token_count, c_exact2 = self.count_tokens(item_xml)
+                t_cnt, c_exact2 = self.count_tokens(item_xml)
+                tentative_ge = tentative_ge.model_copy(update={"token_count": t_cnt})
                 if not c_exact2:
                     is_exact = False
                 accepted.append(tentative_ge)

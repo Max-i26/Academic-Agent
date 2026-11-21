@@ -1,8 +1,9 @@
 """Data models and exception hierarchy for LLM generation in Academic-Agent."""
 
 from enum import Enum
-from typing import Any
-from pydantic import BaseModel, Field, model_validator
+from types import MappingProxyType
+from typing import Any, Mapping
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class MessageRole(str, Enum):
@@ -97,19 +98,27 @@ class ModelLoadingConfig(BaseModel):
 class LLMUsage(BaseModel):
     """Token usage accounting for a generation request."""
 
+    model_config = ConfigDict(frozen=True)
+
     prompt_tokens: int = Field(default=0, ge=0, description="Count of prompt/context tokens")
     completion_tokens: int = Field(default=0, ge=0, description="Count of generated tokens")
     total_tokens: int = Field(default=0, ge=0, description="Sum of prompt and completion tokens")
 
-    @model_validator(mode="after")
-    def compute_total_tokens(self) -> "LLMUsage":
-        if self.total_tokens == 0 and (self.prompt_tokens > 0 or self.completion_tokens > 0):
-            self.total_tokens = self.prompt_tokens + self.completion_tokens
-        return self
+    @model_validator(mode="before")
+    @classmethod
+    def compute_total_tokens(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            prompt = data.get("prompt_tokens", 0)
+            completion = data.get("completion_tokens", 0)
+            if data.get("total_tokens", 0) == 0 and (prompt > 0 or completion > 0):
+                data["total_tokens"] = prompt + completion
+        return data
 
 
 class LLMResponse(BaseModel):
     """Complete output produced by an LLM provider generation call."""
+
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
     content: str = Field(description="Generated response text")
     role: MessageRole = Field(
@@ -129,10 +138,17 @@ class LLMResponse(BaseModel):
         default_factory=LLMUsage,
         description="Token consumption accounting",
     )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict,
+    metadata: Mapping[str, Any] = Field(
+        default_factory=lambda: MappingProxyType({}),
         description="Provider-specific diagnostics (e.g. peak VRAM, device, timestamps)",
     )
+
+    @field_validator("metadata", mode="before")
+    @classmethod
+    def _freeze_metadata(cls, v: Any) -> Any:
+        if isinstance(v, Mapping) and not isinstance(v, MappingProxyType):
+            return MappingProxyType(dict(v))
+        return v
 
 
 # Typed Exception Hierarchy

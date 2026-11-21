@@ -401,6 +401,18 @@ class AcademicAgent(AgentProtocol):
 
             context.final_answer = academic_ans
 
+            outcome = academic_ans.policy_outcome
+
+            # Require authoritative recognized PolicyOutcome
+            if outcome is None:
+                err_msg = "Authoritative PolicyOutcome missing from synthesis result."
+                context.refusal_explanation = err_msg
+                context.transition_to(
+                    AgentTerminalState.TERMINATED_ERROR,
+                    reason=err_msg,
+                )
+                return
+
             # Citation integrity check: any invalid or fabricated citation IDs constitute an integrity failure
             if len(academic_ans.validation.invalid_cited_ids) > 0:
                 context.refusal_explanation = (
@@ -412,14 +424,19 @@ class AcademicAgent(AgentProtocol):
                 )
                 return
 
-            outcome = academic_ans.policy_outcome
-
             if outcome in (PolicyOutcome.ANSWERED, PolicyOutcome.PARTIAL_ANSWER) and is_valid:
                 if not academic_ans.answer_text.strip():
                     context.refusal_explanation = "Synthesizer produced empty answer text."
                     context.transition_to(
                         AgentTerminalState.TERMINATED_ERROR,
                         reason="Empty answer text with answered outcome",
+                    )
+                elif not academic_ans.has_valid_citation_integrity:
+                    err_msg = "Answer marked answered/partial but lacks valid citation integrity."
+                    context.refusal_explanation = err_msg
+                    context.transition_to(
+                        AgentTerminalState.TERMINATED_ERROR,
+                        reason="citation integrity check failed",
                     )
                 else:
                     context.transition_to(
@@ -455,18 +472,13 @@ class AcademicAgent(AgentProtocol):
                     reason="indeterminate evidence sufficiency",
                 )
             else:
-                # Fallback if policy outcome was not evaluated
-                if is_valid and academic_ans.answer_text.strip():
-                    context.transition_to(
-                        AgentTerminalState.TERMINATED_SUCCESS,
-                        reason="Grounded answer synthesized with valid citations.",
-                    )
-                else:
-                    context.refusal_explanation = "Retrieved evidence was insufficient for grounded synthesis."
-                    context.transition_to(
-                        AgentTerminalState.TERMINATED_ABSTENTION,
-                        reason="insufficient evidence",
-                    )
+                # Unrecognized PolicyOutcome: must never silently succeed
+                err_msg = f"Authoritative PolicyOutcome unrecognized: {outcome}"
+                context.refusal_explanation = err_msg
+                context.transition_to(
+                    AgentTerminalState.TERMINATED_ERROR,
+                    reason=err_msg,
+                )
         else:
             # Synthesis tool crashed or timed out
             err_msg = tool_result.error_message or "Synthesis execution failed."

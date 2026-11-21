@@ -142,7 +142,7 @@ class TestCitationSyntaxVariants:
         assert diag.citations[2].evidence_id == "E1"
 
         # Unique cited IDs preserved in first-occurrence order
-        assert diag.valid_cited_ids == ["E1", "E2"]
+        assert diag.valid_cited_ids == ("E1", "E2")
 
         # All 3 offsets exact
         for occ in diag.citations:
@@ -189,8 +189,8 @@ class TestCitationSyntaxVariants:
         assert diag.citations[1].evidence_id == "E99"
         assert diag.citations[1].is_valid is False
 
-        assert diag.valid_cited_ids == ["E1"]
-        assert diag.invalid_cited_ids == ["E99"]
+        assert diag.valid_cited_ids == ("E1",)
+        assert diag.invalid_cited_ids == ("E99",)
 
         # Non-destructive resolution keeps invalid E99 intact
         resolved = validator.resolve_citations(text, sample_context)
@@ -214,8 +214,8 @@ class TestCitationSyntaxVariants:
         text = "Only the first evidence item is referenced [E1]."
 
         diag = validator.validate(text, sample_context)
-        assert diag.valid_cited_ids == ["E1"]
-        assert diag.uncited_evidence_ids == ["E2"]
+        assert diag.valid_cited_ids == ("E1",)
+        assert diag.uncited_evidence_ids == ("E2",)
 
 
 class TestCodeMaskingAndMathPreservation:

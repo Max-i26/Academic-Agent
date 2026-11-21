@@ -89,13 +89,34 @@ class ReActStepPlanner(StepPlannerProtocol):
         )
 
         # Compute pre-flight token budget allowance
+        MIN_VIABLE_GENERATION = 16
         allowed_tokens = self.max_tokens
         if effective_budget:
             consumption = effective_budget.get_consumption()
             tracker_config = getattr(effective_budget, "config", None)
             if tracker_config is not None and hasattr(tracker_config, "max_total_tokens"):
-                remaining_tokens = max(0, tracker_config.max_total_tokens - consumption.token_usage.total_tokens)
-                allowed_tokens = max(16, min(self.max_tokens, remaining_tokens))
+                remaining_total = max(0, tracker_config.max_total_tokens - consumption.token_usage.total_tokens)
+                # Account for prompt tokens as well as completion tokens
+                est_prompt_tokens = sum(max(1, len(m.content) // 4 + 4) for m in messages)
+                remaining_completion = remaining_total - est_prompt_tokens
+
+                if remaining_completion < MIN_VIABLE_GENERATION:
+                    logger.warning(
+                        "Remaining token headroom (%d) below minimum viable generation (%d). Abstaining before provider call.",
+                        remaining_completion,
+                        MIN_VIABLE_GENERATION,
+                    )
+                    return ProposedAction(
+                        action_rationale="Execution budget exhausted: insufficient token headroom remaining for reasoning step.",
+                        decision_summary="Forced abstention due to token budget exhaustion.",
+                        action_type=ActionType.ABSTAIN,
+                        refusal_reason=(
+                            f"Insufficient token budget headroom ({remaining_completion} completion tokens "
+                            f"remaining after estimated {est_prompt_tokens} prompt tokens, minimum required is {MIN_VIABLE_GENERATION})."
+                        ),
+                    )
+
+                allowed_tokens = min(self.max_tokens, remaining_completion)
 
         config = LLMConfig(
             temperature=self.temperature,
@@ -128,23 +149,42 @@ class ReActStepPlanner(StepPlannerProtocol):
             logger.warning("Planner output failed structural validation: %s. Initiating repair.", err)
 
             if self.max_repair_attempts > 0:
+                repair_messages = build_repair_prompt(
+                    malformed_output=response.content,
+                    error_message=str(err),
+                )
                 repair_allowed_tokens = self.max_tokens
                 if effective_budget:
                     repair_consumption = effective_budget.get_consumption()
                     tracker_config = getattr(effective_budget, "config", None)
                     if tracker_config is not None and hasattr(tracker_config, "max_total_tokens"):
-                        repair_remaining = max(
+                        repair_remaining_total = max(
                             0, tracker_config.max_total_tokens - repair_consumption.token_usage.total_tokens
                         )
-                        repair_allowed_tokens = max(16, min(self.max_tokens, repair_remaining))
+                        est_repair_prompt = sum(max(1, len(m.content) // 4 + 4) for m in repair_messages)
+                        repair_completion_headroom = repair_remaining_total - est_repair_prompt
+
+                        if repair_completion_headroom < MIN_VIABLE_GENERATION:
+                            logger.warning(
+                                "Remaining token headroom (%d) below minimum viable repair allowance (%d). Abstaining.",
+                                repair_completion_headroom,
+                                MIN_VIABLE_GENERATION,
+                            )
+                            return ProposedAction(
+                                action_rationale="Execution budget exhausted: insufficient token headroom remaining for repair step.",
+                                decision_summary="Forced abstention due to token budget exhaustion during repair.",
+                                action_type=ActionType.ABSTAIN,
+                                refusal_reason=(
+                                    f"Insufficient token budget headroom for repair ({repair_completion_headroom} completion "
+                                    f"tokens remaining, minimum required is {MIN_VIABLE_GENERATION})."
+                                ),
+                            )
+
+                        repair_allowed_tokens = min(self.max_tokens, repair_completion_headroom)
 
                 repair_config = LLMConfig(
                     temperature=self.temperature,
                     max_new_tokens=repair_allowed_tokens,
-                )
-                repair_messages = build_repair_prompt(
-                    malformed_output=response.content,
-                    error_message=str(err),
                 )
                 repair_response = self.llm_provider.generate(repair_messages, config=repair_config)
 

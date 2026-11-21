@@ -2,7 +2,8 @@
 
 import re
 from enum import Enum
-from typing import Any
+from types import MappingProxyType
+from typing import Any, Mapping
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from academic_agent.generation.models import LLMResponse
@@ -34,10 +35,12 @@ class OmissionReason(str, Enum):
 class OmittedCandidate(BaseModel):
     """Structured audit record of an omitted candidate during context assembly."""
 
+    model_config = ConfigDict(frozen=True)
+
     record_id: str = Field(description="Record ID of the candidate.")
     chunk_id: str = Field(description="Chunk ID or unit ID of the candidate.")
     source_file: str = Field(description="Source lecture PDF or document filename.")
-    source_pages: list[int] = Field(default_factory=list, description="Contributing source pages.")
+    source_pages: tuple[int, ...] = Field(default_factory=tuple, description="Contributing source pages.")
     reason: OmissionReason = Field(description="Categorical reason why candidate was omitted.")
     details: str = Field(default="", description="Detailed explanation or threshold metrics for omission.")
     rank: int = Field(ge=1, description="Original retrieval rank (1-based).")
@@ -50,6 +53,8 @@ class OmittedCandidate(BaseModel):
 
 class GroundedEvidence(BaseModel):
     """An individual retrieved evidence item with application-assigned ID and verified provenance."""
+
+    model_config = ConfigDict(frozen=True)
 
     evidence_id: str = Field(description="Strict synthesis identifier matching '^E[1-9]\\d*$' (e.g. 'E1', 'E2').")
     evidence: Evidence = Field(description="Underlying Phase 4 Evidence record with full provenance.")
@@ -78,7 +83,7 @@ class GroundedEvidence(BaseModel):
     def validate_or_derive_citation_label(self) -> "GroundedEvidence":
         expected_citation = self.evidence.format_citation()
         if not self.citation_label:
-            self.citation_label = expected_citation
+            object.__setattr__(self, "citation_label", expected_citation)
         elif self.citation_label != expected_citation:
             raise ValueError(
                 f"citation_label '{self.citation_label}' does not match underlying evidence provenance '{expected_citation}'."
@@ -109,8 +114,10 @@ class EvidenceContext(BaseModel):
     'items' is the canonical source of truth. Lookup maps and omission metrics are dynamically derived.
     """
 
-    items: list[GroundedEvidence] = Field(
-        default_factory=list,
+    model_config = ConfigDict(frozen=True)
+
+    items: tuple[GroundedEvidence, ...] = Field(
+        default_factory=tuple,
         description="Canonical ordered grounded evidence items.",
     )
     total_tokens: int = Field(
@@ -123,8 +130,8 @@ class EvidenceContext(BaseModel):
         ge=0,
         description="Maximum token budget allocated for evidence.",
     )
-    omitted_candidates: list[OmittedCandidate] = Field(
-        default_factory=list,
+    omitted_candidates: tuple[OmittedCandidate, ...] = Field(
+        default_factory=tuple,
         description="Audit record of candidate items omitted during context assembly.",
     )
     is_exact_token_count: bool = Field(
@@ -174,9 +181,9 @@ class EvidenceContext(BaseModel):
         return len(self.items)
 
     @property
-    def evidence_ids(self) -> list[str]:
-        """Ordered list of valid evidence IDs present in this context."""
-        return [item.evidence_id for item in self.items]
+    def evidence_ids(self) -> tuple[str, ...]:
+        """Ordered tuple of valid evidence IDs present in this context."""
+        return tuple(item.evidence_id for item in self.items)
 
     @property
     def has_omissions(self) -> bool:
@@ -189,9 +196,9 @@ class EvidenceContext(BaseModel):
         return len(self.omitted_candidates)
 
     @property
-    def evidence_lookup(self) -> dict[str, GroundedEvidence]:
+    def evidence_lookup(self) -> Mapping[str, GroundedEvidence]:
         """Dynamic lookup mapping 'E1' -> GroundedEvidence derived strictly from canonical items."""
-        return {item.evidence_id: item for item in self.items}
+        return MappingProxyType({item.evidence_id: item for item in self.items})
 
     def get(self, evidence_id: str) -> GroundedEvidence | None:
         """Fetch item by normalized ID (accepts 'E1' or '[E1]')."""
@@ -256,7 +263,7 @@ class PolicyValidationResult(BaseModel):
 
     outcome: PolicyOutcome = Field(description="Categorical policy outcome.")
     refusal_detected: bool = Field(default=False, description="Whether refusal language was found.")
-    refusal_phrases: list[str] = Field(default_factory=list, description="Extracted refusal substrings.")
+    refusal_phrases: tuple[str, ...] = Field(default_factory=tuple, description="Extracted refusal substrings.")
     has_substantive_continuation: bool = Field(
         default=False,
         description="Whether substantive claims followed a refusal statement.",
@@ -269,7 +276,7 @@ class PolicyValidationResult(BaseModel):
         description="True if answer complies with academic answering guidelines (ANSWERED, COMPLIANT_ABSTENTION, PARTIAL_ANSWER).",
     )
     explanation: str = Field(default="", description="Detailed rationale for the policy classification.")
-    warnings: list[str] = Field(default_factory=list, description="Policy anomalies or warnings.")
+    warnings: tuple[str, ...] = Field(default_factory=tuple, description="Policy anomalies or warnings.")
 
 
 class ValidationDiagnostics(BaseModel):
@@ -277,24 +284,24 @@ class ValidationDiagnostics(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    citations: list[CitationOccurrence] = Field(
-        default_factory=list,
+    citations: tuple[CitationOccurrence, ...] = Field(
+        default_factory=tuple,
         description="All citation occurrences with exact character spans.",
     )
-    valid_cited_ids: list[str] = Field(
-        default_factory=list,
+    valid_cited_ids: tuple[str, ...] = Field(
+        default_factory=tuple,
         description="Unique cited IDs verified to exist in context.",
     )
-    invalid_cited_ids: list[str] = Field(
-        default_factory=list,
+    invalid_cited_ids: tuple[str, ...] = Field(
+        default_factory=tuple,
         description="Fabricated IDs cited by the LLM (e.g. [E99]).",
     )
-    uncited_evidence_ids: list[str] = Field(
-        default_factory=list,
+    uncited_evidence_ids: tuple[str, ...] = Field(
+        default_factory=tuple,
         description="Context evidence IDs never cited in answer.",
     )
-    malformed_citations: list[str] = Field(
-        default_factory=list,
+    malformed_citations: tuple[str, ...] = Field(
+        default_factory=tuple,
         description="Malformed or ambiguous citation strings.",
     )
     refusal_detected: bool = Field(
@@ -305,13 +312,13 @@ class ValidationDiagnostics(BaseModel):
         default=EvidenceSufficiency.UNKNOWN,
         description="Assessed evidence sufficiency for this query/answer pair.",
     )
-    warnings: list[str] = Field(
-        default_factory=list,
+    warnings: tuple[str, ...] = Field(
+        default_factory=tuple,
         description="Non-fatal anomalies or warnings.",
     )
 
     @property
-    def cited_ids(self) -> list[str]:
+    def cited_ids(self) -> tuple[str, ...]:
         """All unique cited IDs preserving first-occurrence order."""
         seen = set()
         out = []
@@ -319,7 +326,7 @@ class ValidationDiagnostics(BaseModel):
             if c.evidence_id not in seen:
                 seen.add(c.evidence_id)
                 out.append(c.evidence_id)
-        return out
+        return tuple(out)
 
 
 class AcademicAnswer(BaseModel):
