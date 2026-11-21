@@ -168,8 +168,15 @@ class MockEvidenceFilterTool:
 
 
 class MockAcademicSynthesizerTool:
-    def __init__(self, is_valid: bool = True) -> None:
+    def __init__(
+        self,
+        is_valid: bool = True,
+        outcome: Optional[PolicyOutcome] = None,
+        invalid_cited_ids: Optional[List[str]] = None,
+    ) -> None:
         self.is_valid = is_valid
+        self.outcome = outcome
+        self.invalid_cited_ids = invalid_cited_ids or []
 
     @property
     def name(self) -> str:
@@ -193,6 +200,8 @@ class MockAcademicSynthesizerTool:
 
     def execute(self, arguments: dict) -> ToolResult:
         query_text = arguments.get("query", "test")
+        effective_outcome = self.outcome or (PolicyOutcome.ANSWERED if self.is_valid else PolicyOutcome.COMPLIANT_ABSTENTION)
+        valid_ids = ["cand_0"] if not self.invalid_cited_ids else []
         ans = AcademicAnswer(
             answer_text="Backpropagation applies chain rule recursively [1].",
             resolved_answer_text="Backpropagation applies chain rule recursively [Lecture 04, p.12].",
@@ -205,16 +214,16 @@ class MockAcademicSynthesizerTool:
                         raw_citation="[1]",
                         start_char=44,
                         end_char=47,
-                        is_valid=True,
+                        is_valid=len(valid_ids) > 0,
                         resolution_label="Lecture 04, p.12",
                     )
                 ],
-                valid_cited_ids=["cand_0"],
-                invalid_cited_ids=[],
+                valid_cited_ids=valid_ids,
+                invalid_cited_ids=self.invalid_cited_ids,
             ),
             policy_result=PolicyValidationResult(
-                outcome=PolicyOutcome.ANSWERED if self.is_valid else PolicyOutcome.COMPLIANT_ABSTENTION,
-                is_compliant=self.is_valid,
+                outcome=effective_outcome,
+                is_compliant=(effective_outcome in {PolicyOutcome.ANSWERED, PolicyOutcome.PARTIAL_ANSWER, PolicyOutcome.COMPLIANT_ABSTENTION}),
             ),
             raw_response=LLMResponse(
                 content="Backpropagation applies chain rule recursively [1].",
@@ -231,7 +240,7 @@ class MockAcademicSynthesizerTool:
             output={
                 "answer_text": ans.resolved_answer_text,
                 "raw_answer": ans.answer_text,
-                "is_valid_academic_answer": self.is_valid,
+                "is_valid_academic_answer": self.is_valid and (effective_outcome in {PolicyOutcome.ANSWERED, PolicyOutcome.PARTIAL_ANSWER}),
                 "academic_answer": ans,
             },
         )
@@ -782,3 +791,160 @@ class TestOrchestratorAdversarialAndConcurrency:
         candidates = step_0.tool_result.output["candidates"]
         with pytest.raises((TypeError, AttributeError)):
             candidates[0]["score"] = 0.0  # type: ignore
+
+        # Level 5: Nested mutation on frozen AcademicAnswer
+        assert trace.final_answer is not None
+        with pytest.raises((Exception, TypeError)):
+            trace.final_answer.answer_text = "MUTATED_ANSWER"  # type: ignore
+
+    def test_synthesis_policy_outcome_unsupported_answer_abstains(self) -> None:
+        """Verify that synthesis with UNSUPPORTED_ANSWER transitions to TERMINATED_ABSTENTION."""
+        resp_1 = json.dumps({
+            "action_rationale": "Search.",
+            "decision_summary": "Search.",
+            "action_type": "SEARCH",
+            "tool_call": {"call_id": "c1", "tool_name": "academic_search", "arguments": {"query": "test"}},
+        })
+        resp_2 = json.dumps({
+            "action_rationale": "Synthesize.",
+            "decision_summary": "Synthesize.",
+            "action_type": "SYNTHESIZE",
+            "tool_call": {"call_id": "c2", "tool_name": "academic_synthesizer", "arguments": {"query": "test"}},
+        })
+
+        provider = MockLLMProvider([resp_1, resp_2])
+        registry = ToolRegistry()
+        registry.register(MockAcademicSearchTool())
+        registry.register(MockAcademicSynthesizerTool(is_valid=False, outcome=PolicyOutcome.UNSUPPORTED_ANSWER))
+
+        planner = ReActStepPlanner(llm_provider=provider)
+        agent = AcademicAgent(tool_registry=registry, planner=planner)
+
+        trace = agent.run("What is quantum backpropagation?")
+        assert trace.terminal_state == AgentTerminalState.TERMINATED_ABSTENTION.value
+        assert "unsupported" in (trace.refusal_explanation or "").lower()
+        assert trace.transitions[-1].reason == "unsupported claims"
+        assert trace.final_answer is not None
+
+    def test_synthesis_policy_outcome_contradictory_refusal_errors(self) -> None:
+        """Verify that synthesis with CONTRADICTORY_REFUSAL transitions to TERMINATED_ERROR."""
+        resp_1 = json.dumps({
+            "action_rationale": "Search.",
+            "decision_summary": "Search.",
+            "action_type": "SEARCH",
+            "tool_call": {"call_id": "c1", "tool_name": "academic_search", "arguments": {"query": "test"}},
+        })
+        resp_2 = json.dumps({
+            "action_rationale": "Synthesize.",
+            "decision_summary": "Synthesize.",
+            "action_type": "SYNTHESIZE",
+            "tool_call": {"call_id": "c2", "tool_name": "academic_synthesizer", "arguments": {"query": "test"}},
+        })
+
+        provider = MockLLMProvider([resp_1, resp_2])
+        registry = ToolRegistry()
+        registry.register(MockAcademicSearchTool())
+        registry.register(MockAcademicSynthesizerTool(is_valid=False, outcome=PolicyOutcome.CONTRADICTORY_REFUSAL))
+
+        planner = ReActStepPlanner(llm_provider=provider)
+        agent = AcademicAgent(tool_registry=registry, planner=planner)
+
+        trace = agent.run("Explain contradictory refusal.")
+        assert trace.terminal_state == AgentTerminalState.TERMINATED_ERROR.value
+        assert trace.transitions[-1].reason == "contradictory refusal"
+        assert trace.final_answer is not None
+
+    def test_synthesis_citation_integrity_failure_fabricated_ids(self) -> None:
+        """Verify that synthesis with fabricated citation IDs transitions to TERMINATED_ERROR."""
+        resp_1 = json.dumps({
+            "action_rationale": "Search.",
+            "decision_summary": "Search.",
+            "action_type": "SEARCH",
+            "tool_call": {"call_id": "c1", "tool_name": "academic_search", "arguments": {"query": "test"}},
+        })
+        resp_2 = json.dumps({
+            "action_rationale": "Synthesize.",
+            "decision_summary": "Synthesize.",
+            "action_type": "SYNTHESIZE",
+            "tool_call": {"call_id": "c2", "tool_name": "academic_synthesizer", "arguments": {"query": "test"}},
+        })
+
+        provider = MockLLMProvider([resp_1, resp_2])
+        registry = ToolRegistry()
+        registry.register(MockAcademicSearchTool())
+        registry.register(MockAcademicSynthesizerTool(is_valid=True, invalid_cited_ids=["E99"]))
+
+        planner = ReActStepPlanner(llm_provider=provider)
+        agent = AcademicAgent(tool_registry=registry, planner=planner)
+
+        trace = agent.run("Explain citation fabrication.")
+        assert trace.terminal_state == AgentTerminalState.TERMINATED_ERROR.value
+        assert trace.transitions[-1].reason == "citation integrity check failed"
+        assert trace.final_answer is not None
+
+    def test_planner_preflight_token_budget_clamping(self) -> None:
+        """Verify that ReActStepPlanner clamps max_new_tokens based on remaining budget headroom."""
+        captured_configs: List[LLMConfig] = []
+
+        class RecordingLLMProvider:
+            @property
+            def model_name(self) -> str:
+                return "recording-llm"
+            @property
+            def context_window(self) -> int:
+                return 4096
+            @property
+            def is_available(self) -> bool:
+                return True
+            def generate(self, messages: Any, config: Optional[LLMConfig] = None) -> LLMResponse:
+                if config:
+                    captured_configs.append(config)
+                return LLMResponse(
+                    content=json.dumps({
+                        "action_rationale": "Finish.",
+                        "decision_summary": "Finish.",
+                        "action_type": "FINISH",
+                        "direct_answer": "Complete.",
+                    }),
+                    role=MessageRole.ASSISTANT,
+                    model_name=self.model_name,
+                    latency_ms=10.0,
+                    usage=LLMUsage(prompt_tokens=50, completion_tokens=20, total_tokens=70),
+                )
+            def load(self) -> None: pass
+            def release(self) -> None: pass
+
+        provider = RecordingLLMProvider()
+        budget_cfg = BudgetConfig(max_total_tokens=500)
+        tracker = ExecutionBudgetTracker(config=budget_cfg)
+        # Consume 380 tokens so remaining tokens = 120
+        tracker.record_tokens(prompt=300, completion=80, is_exact=True)
+
+        planner = ReActStepPlanner(llm_provider=provider, max_tokens=1024)
+        action = planner.plan_next_step(
+            query="Test query",
+            history=[],
+            available_tools=[],
+            budget_tracker=tracker,
+        )
+
+        assert action.action_type == ActionType.FINISH
+        assert len(captured_configs) == 1
+        # max_tokens was 1024, but headroom was 120 -> clamped to 120
+        assert captured_configs[0].max_new_tokens == 120
+
+        # Now test minimum clamping floor (16) when headroom is very low (e.g. 5 tokens left)
+        captured_configs.clear()
+        tracker2 = ExecutionBudgetTracker(config=BudgetConfig(max_total_tokens=100))
+        tracker2.record_tokens(prompt=80, completion=15, is_exact=True)  # 5 tokens left
+
+        action2 = planner.plan_next_step(
+            query="Test query 2",
+            history=[],
+            available_tools=[],
+            budget_tracker=tracker2,
+        )
+        assert len(captured_configs) == 1
+        # remaining was 5, floor is 16 -> max(16, min(1024, 5)) == 16
+        assert captured_configs[0].max_new_tokens == 16
+        assert action2.action_type == ActionType.ABSTAIN

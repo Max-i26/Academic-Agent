@@ -3,7 +3,7 @@
 import re
 from enum import Enum
 from typing import Any
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from academic_agent.generation.models import LLMResponse
 from academic_agent.retrieval.models import Evidence
@@ -205,6 +205,8 @@ class CitationOccurrence(BaseModel):
     Distinguishes the outer citation group span from the individual evidence reference token.
     """
 
+    model_config = ConfigDict(frozen=True)
+
     evidence_id: str = Field(description="Parsed identifier without brackets (e.g. 'E1').")
     raw_citation: str = Field(description="Raw citation substring (e.g. '[E1]' or '[E1, E2]').")
     start_char: int = Field(ge=0, description="Start character offset in generated text.")
@@ -250,6 +252,8 @@ class PolicyOutcome(str, Enum):
 class PolicyValidationResult(BaseModel):
     """Evaluation result assessing answer compliance against academic answering policy."""
 
+    model_config = ConfigDict(frozen=True)
+
     outcome: PolicyOutcome = Field(description="Categorical policy outcome.")
     refusal_detected: bool = Field(default=False, description="Whether refusal language was found.")
     refusal_phrases: list[str] = Field(default_factory=list, description="Extracted refusal substrings.")
@@ -270,6 +274,8 @@ class PolicyValidationResult(BaseModel):
 
 class ValidationDiagnostics(BaseModel):
     """Detailed audit metrics and anomalies detected during answer validation."""
+
+    model_config = ConfigDict(frozen=True)
 
     citations: list[CitationOccurrence] = Field(
         default_factory=list,
@@ -318,6 +324,8 @@ class ValidationDiagnostics(BaseModel):
 
 class AcademicAnswer(BaseModel):
     """Final grounded academic answer with verified citations, provenance, and diagnostics."""
+
+    model_config = ConfigDict(frozen=True)
 
     answer_text: str = Field(description="Generated answer with original compact citation tags (e.g. [E1]).")
     resolved_answer_text: str = Field(

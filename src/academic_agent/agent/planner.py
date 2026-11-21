@@ -88,20 +88,38 @@ class ReActStepPlanner(StepPlannerProtocol):
             budget_status=budget_status,
         )
 
+        # Compute pre-flight token budget allowance
+        allowed_tokens = self.max_tokens
+        if effective_budget:
+            consumption = effective_budget.get_consumption()
+            tracker_config = getattr(effective_budget, "config", None)
+            if tracker_config is not None and hasattr(tracker_config, "max_total_tokens"):
+                remaining_tokens = max(0, tracker_config.max_total_tokens - consumption.token_usage.total_tokens)
+                allowed_tokens = max(16, min(self.max_tokens, remaining_tokens))
+
         config = LLMConfig(
             temperature=self.temperature,
-            max_new_tokens=self.max_tokens,
+            max_new_tokens=allowed_tokens,
         )
 
         # First generation attempt
         response = self.llm_provider.generate(messages, config=config)
 
         if effective_budget and response.usage:
-            effective_budget.record_tokens(
-                prompt=response.usage.prompt_tokens,
-                completion=response.usage.completion_tokens,
-                is_exact=True,
-            )
+            try:
+                effective_budget.record_tokens(
+                    prompt=response.usage.prompt_tokens,
+                    completion=response.usage.completion_tokens,
+                    is_exact=True,
+                )
+            except Exception as token_exc:
+                logger.warning("Token budget exceeded during planner generation: %s", token_exc)
+                return ProposedAction(
+                    action_rationale=f"Token budget exhausted during reasoning: {token_exc}",
+                    decision_summary="Abstaining due to token budget exhaustion.",
+                    action_type=ActionType.ABSTAIN,
+                    refusal_reason=str(token_exc),
+                )
 
         # Parse output
         try:
@@ -110,18 +128,41 @@ class ReActStepPlanner(StepPlannerProtocol):
             logger.warning("Planner output failed structural validation: %s. Initiating repair.", err)
 
             if self.max_repair_attempts > 0:
+                repair_allowed_tokens = self.max_tokens
+                if effective_budget:
+                    repair_consumption = effective_budget.get_consumption()
+                    tracker_config = getattr(effective_budget, "config", None)
+                    if tracker_config is not None and hasattr(tracker_config, "max_total_tokens"):
+                        repair_remaining = max(
+                            0, tracker_config.max_total_tokens - repair_consumption.token_usage.total_tokens
+                        )
+                        repair_allowed_tokens = max(16, min(self.max_tokens, repair_remaining))
+
+                repair_config = LLMConfig(
+                    temperature=self.temperature,
+                    max_new_tokens=repair_allowed_tokens,
+                )
                 repair_messages = build_repair_prompt(
                     malformed_output=response.content,
                     error_message=str(err),
                 )
-                repair_response = self.llm_provider.generate(repair_messages, config=config)
+                repair_response = self.llm_provider.generate(repair_messages, config=repair_config)
 
                 if effective_budget and repair_response.usage:
-                    effective_budget.record_tokens(
-                        prompt=repair_response.usage.prompt_tokens,
-                        completion=repair_response.usage.completion_tokens,
-                        is_exact=True,
-                    )
+                    try:
+                        effective_budget.record_tokens(
+                            prompt=repair_response.usage.prompt_tokens,
+                            completion=repair_response.usage.completion_tokens,
+                            is_exact=True,
+                        )
+                    except Exception as repair_token_exc:
+                        logger.warning("Token budget exceeded during planner repair: %s", repair_token_exc)
+                        return ProposedAction(
+                            action_rationale=f"Token budget exhausted during reasoning repair: {repair_token_exc}",
+                            decision_summary="Abstaining due to token budget exhaustion during repair.",
+                            action_type=ActionType.ABSTAIN,
+                            refusal_reason=str(repair_token_exc),
+                        )
 
                 try:
                     return self.parser.parse(repair_response.content)

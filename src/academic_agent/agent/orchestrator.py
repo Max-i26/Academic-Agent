@@ -30,7 +30,7 @@ from academic_agent.agent.protocols import (
     ToolRegistryProtocol,
 )
 from academic_agent.agent.tools.policy import ClarificationPolicy, QueryAssessmentCategory
-from academic_agent.generation.synthesis.models import AcademicAnswer
+from academic_agent.generation.synthesis.models import AcademicAnswer, PolicyOutcome
 
 logger = logging.getLogger(__name__)
 
@@ -389,20 +389,7 @@ class AcademicAgent(AgentProtocol):
             self._notify_step_completed(context.run_id, synth_step)
 
             # Invariant: TERMINATED_SUCCESS strictly requires an actual AcademicAnswer instance
-            if isinstance(academic_ans, AcademicAnswer) and is_valid and academic_ans.answer_text.strip():
-                context.final_answer = academic_ans
-                context.transition_to(
-                    AgentTerminalState.TERMINATED_SUCCESS,
-                    reason="Grounded answer synthesized with valid citations.",
-                )
-            elif isinstance(academic_ans, AcademicAnswer) and not is_valid:
-                context.final_answer = academic_ans
-                context.refusal_explanation = "Retrieved evidence was insufficient for grounded synthesis."
-                context.transition_to(
-                    AgentTerminalState.TERMINATED_ABSTENTION,
-                    reason="Synthesis produced refusal or partial answer dominated by evidence gaps.",
-                )
-            else:
+            if not isinstance(academic_ans, AcademicAnswer):
                 # Malformed output: succeeded but omitted AcademicAnswer instance or validity flag
                 err_msg = "Synthesis tool reported success but failed to provide a valid AcademicAnswer instance."
                 context.refusal_explanation = err_msg
@@ -410,6 +397,76 @@ class AcademicAgent(AgentProtocol):
                     AgentTerminalState.TERMINATED_ERROR,
                     reason=err_msg,
                 )
+                return
+
+            context.final_answer = academic_ans
+
+            # Citation integrity check: any invalid or fabricated citation IDs constitute an integrity failure
+            if len(academic_ans.validation.invalid_cited_ids) > 0:
+                context.refusal_explanation = (
+                    f"Citation integrity check failed: fabricated citation IDs detected {academic_ans.validation.invalid_cited_ids}."
+                )
+                context.transition_to(
+                    AgentTerminalState.TERMINATED_ERROR,
+                    reason="citation integrity check failed",
+                )
+                return
+
+            outcome = academic_ans.policy_outcome
+
+            if outcome in (PolicyOutcome.ANSWERED, PolicyOutcome.PARTIAL_ANSWER) and is_valid:
+                if not academic_ans.answer_text.strip():
+                    context.refusal_explanation = "Synthesizer produced empty answer text."
+                    context.transition_to(
+                        AgentTerminalState.TERMINATED_ERROR,
+                        reason="Empty answer text with answered outcome",
+                    )
+                else:
+                    context.transition_to(
+                        AgentTerminalState.TERMINATED_SUCCESS,
+                        reason="Grounded answer synthesized with valid citations.",
+                    )
+            elif outcome == PolicyOutcome.COMPLIANT_ABSTENTION or (
+                outcome in (PolicyOutcome.ANSWERED, PolicyOutcome.PARTIAL_ANSWER) and not is_valid
+            ):
+                context.refusal_explanation = "Retrieved evidence was insufficient for grounded synthesis."
+                context.transition_to(
+                    AgentTerminalState.TERMINATED_ABSTENTION,
+                    reason="insufficient evidence",
+                )
+            elif outcome == PolicyOutcome.UNSUPPORTED_ANSWER:
+                context.refusal_explanation = "Synthesizer generated claims unsupported by retrieved evidence."
+                context.transition_to(
+                    AgentTerminalState.TERMINATED_ABSTENTION,
+                    reason="unsupported claims",
+                )
+            elif outcome == PolicyOutcome.CONTRADICTORY_REFUSAL:
+                context.refusal_explanation = (
+                    "Synthesizer generated a contradictory refusal followed by substantive claims."
+                )
+                context.transition_to(
+                    AgentTerminalState.TERMINATED_ERROR,
+                    reason="contradictory refusal",
+                )
+            elif outcome == PolicyOutcome.INDETERMINATE:
+                context.refusal_explanation = "Evidence sufficiency for the question could not be determined."
+                context.transition_to(
+                    AgentTerminalState.TERMINATED_ABSTENTION,
+                    reason="indeterminate evidence sufficiency",
+                )
+            else:
+                # Fallback if policy outcome was not evaluated
+                if is_valid and academic_ans.answer_text.strip():
+                    context.transition_to(
+                        AgentTerminalState.TERMINATED_SUCCESS,
+                        reason="Grounded answer synthesized with valid citations.",
+                    )
+                else:
+                    context.refusal_explanation = "Retrieved evidence was insufficient for grounded synthesis."
+                    context.transition_to(
+                        AgentTerminalState.TERMINATED_ABSTENTION,
+                        reason="insufficient evidence",
+                    )
         else:
             # Synthesis tool crashed or timed out
             err_msg = tool_result.error_message or "Synthesis execution failed."

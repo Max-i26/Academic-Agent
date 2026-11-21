@@ -184,7 +184,7 @@ class AcademicSynthesizer:
 
         # 7. Validate citations & resolve human-readable labels
         diagnostics = self.citation_validator.validate(raw_text, evidence_context)
-        diagnostics.evidence_sufficiency = assessed_sufficiency
+        diagnostics = diagnostics.model_copy(update={"evidence_sufficiency": assessed_sufficiency})
 
         resolved_answer_text = self.citation_validator.resolve_citations(
             raw_text,
@@ -198,7 +198,7 @@ class AcademicSynthesizer:
             diagnostics=diagnostics,
             sufficiency=assessed_sufficiency,
         )
-        diagnostics.refusal_detected = policy_result.refusal_detected
+        diagnostics = diagnostics.model_copy(update={"refusal_detected": policy_result.refusal_detected})
 
         total_latency_ms = (time.perf_counter() - start_time) * 1000.0
 
