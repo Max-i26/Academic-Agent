@@ -26,7 +26,13 @@ from academic_agent.agent.protocols import (
     StepPlannerProtocol,
     ExecutionBudgetTrackerProtocol,
     AgentMemoryProtocol,
+    AgentLifecycleObserverProtocol,
     AgentProtocol,
+)
+from academic_agent.agent.context import (
+    CancellationToken,
+    AgentRunConfig,
+    AgentExecutionContext,
 )
 from academic_agent.agent.fsm import AgentStateMachine
 from academic_agent.agent.budget import ExecutionBudgetTracker, BudgetExceededError
@@ -94,7 +100,12 @@ __all__ = [
     "StepPlannerProtocol",
     "ExecutionBudgetTrackerProtocol",
     "AgentMemoryProtocol",
+    "AgentLifecycleObserverProtocol",
     "AgentProtocol",
+    # Execution Context & Cancellation
+    "CancellationToken",
+    "AgentRunConfig",
+    "AgentExecutionContext",
     # Budget Engine
     "ExecutionBudgetTracker",
     "BudgetExceededError",

@@ -140,9 +140,30 @@ class AgentMemoryProtocol(Protocol):
 
 
 @runtime_checkable
+class AgentLifecycleObserverProtocol(Protocol):
+    """Protocol for optional telemetry and execution observation hooks."""
+
+    def on_run_started(self, run_id: str, query: str) -> None:
+        """Invoked when agent run begins."""
+        ...
+
+    def on_step_completed(self, run_id: str, step: AgentStep) -> None:
+        """Invoked when an agent execution step concludes."""
+        ...
+
+    def on_run_completed(self, run_id: str, trace: AgentTrace) -> None:
+        """Invoked when run finishes and final AgentTrace is generated."""
+        ...
+
+
+@runtime_checkable
 class AgentProtocol(Protocol):
     """High-level autonomous academic agent interface."""
 
-    def run(self, query: str) -> AgentTrace:
+    def run(
+        self,
+        query: str,
+        cancellation_token: Optional[Any] = None,
+    ) -> AgentTrace:
         """Execute bounded academic research and synthesis for user question."""
         ...

@@ -103,4 +103,5 @@ class AcademicSynthesizerTool(BaseAgentTool):
             "omissions": [o.model_dump() for o in omissions],
             "latency_ms": answer.latency_ms,
             "is_valid_academic_answer": outcome in {PolicyOutcome.ANSWERED, PolicyOutcome.PARTIAL_ANSWER},
+            "academic_answer": answer,
         }
