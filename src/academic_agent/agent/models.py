@@ -33,7 +33,7 @@ def freeze_data(val: Any) -> Any:
     if isinstance(val, (set, frozenset)):
         return frozenset(freeze_data(x) for x in val)
     if isinstance(val, BaseModel):
-        if _is_deeply_immutable(val):
+        if getattr(val, "model_config", {}).get("frozen", False):
             return val
         return MappingProxyType({k: freeze_data(v) for k, v in val.model_dump().items()})
     if hasattr(val, "__dict__"):

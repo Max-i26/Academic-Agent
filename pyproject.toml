@@ -27,12 +27,18 @@ local-llm = [
     "accelerate>=0.28.0",
     "bitsandbytes>=0.43.0",
 ]
+serving = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.28.0",
+    "httpx>=0.27.0",
+    "sse-starlette>=2.0.0",
+]
 dev = [
     "pytest==9.2.0",
     "pytest-cov>=6,<8",
 ]
 all = [
-    "academic-agent[embeddings,storage,local-llm,dev]",
+    "academic-agent[embeddings,storage,local-llm,serving,dev]",
 ]
 
 [tool.setuptools.packages.find]

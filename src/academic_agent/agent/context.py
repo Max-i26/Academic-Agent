@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 import threading
 import time
-from typing import List, Optional, Tuple
+from typing import List, Optional, Sequence, Tuple
 import uuid
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -20,6 +20,7 @@ from academic_agent.agent.models import (
     BudgetConsumption,
     StateTransitionRecord,
 )
+from academic_agent.agent.protocols import AgentLifecycleObserverProtocol
 from academic_agent.generation.synthesis.models import AcademicAnswer
 
 
@@ -90,11 +91,13 @@ class AgentExecutionContext:
         config: Optional[AgentRunConfig] = None,
         run_id: Optional[str] = None,
         cancellation_token: Optional[CancellationToken] = None,
+        observers: Optional[Sequence[AgentLifecycleObserverProtocol]] = None,
     ) -> None:
         self.run_id: str = run_id or str(uuid.uuid4())
         self.query: str = query
         self.config: AgentRunConfig = config or AgentRunConfig()
         self.cancellation_token: CancellationToken = cancellation_token or CancellationToken()
+        self.observers: Tuple[AgentLifecycleObserverProtocol, ...] = tuple(observers or ())
 
         self.start_perf_time: float = time.perf_counter()
         self.created_at_iso: str = datetime.now(timezone.utc).isoformat()

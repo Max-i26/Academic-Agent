@@ -2,7 +2,7 @@
 
 import logging
 import time
-from typing import List, Mapping, Optional
+from typing import List, Mapping, Optional, Sequence
 
 from academic_agent.agent.context import (
     AgentExecutionContext,
@@ -68,6 +68,8 @@ class AcademicAgent(AgentProtocol):
         query: str,
         cancellation_token: Optional[CancellationToken] = None,
         config: Optional[AgentRunConfig] = None,
+        run_id: Optional[str] = None,
+        observers: Optional[Sequence[AgentLifecycleObserverProtocol]] = None,
     ) -> AgentTrace:
         """Execute bounded academic research and synthesis for the user query.
 
@@ -75,6 +77,8 @@ class AcademicAgent(AgentProtocol):
             query: Student's academic question.
             cancellation_token: Optional token for cooperative interruption.
             config: Optional per-run configuration overrides.
+            run_id: Optional client-specified run ID.
+            observers: Optional per-run lifecycle observers.
 
         Returns:
             Immutable AgentTrace documenting the entire execution lifecycle.
@@ -83,10 +87,12 @@ class AcademicAgent(AgentProtocol):
         context = AgentExecutionContext(
             query=query,
             config=run_config,
+            run_id=run_id,
             cancellation_token=cancellation_token,
+            observers=observers,
         )
 
-        self._notify_run_started(context.run_id, query)
+        self._notify_run_started(context.run_id, query, context)
 
         try:
             self._execute_lifecycle(context)
@@ -95,7 +101,7 @@ class AcademicAgent(AgentProtocol):
             self._handle_unexpected_failure(context, exc)
 
         trace = context.build_trace()
-        self._notify_run_completed(context.run_id, trace)
+        self._notify_run_completed(context.run_id, trace, context)
         return trace
 
     def _execute_lifecycle(self, context: AgentExecutionContext) -> None:
@@ -246,7 +252,7 @@ class AcademicAgent(AgentProtocol):
                 latency_ms=round(step_latency_ms, 2),
             )
             context.add_step(rejected_step)
-            self._notify_step_completed(context.run_id, rejected_step)
+            self._notify_step_completed(context.run_id, rejected_step, context)
 
             # Check consecutive rejections ceiling
             if context.consecutive_rejections >= context.config.max_consecutive_rejections:
@@ -294,7 +300,7 @@ class AcademicAgent(AgentProtocol):
                 latency_ms=round(step_latency_ms, 2),
             )
             context.add_step(abstain_step)
-            self._notify_step_completed(context.run_id, abstain_step)
+            self._notify_step_completed(context.run_id, abstain_step, context)
             context.refusal_explanation = action.refusal_reason or "Agent abstained from answering."
             context.transition_to(
                 AgentTerminalState.TERMINATED_ABSTENTION,
@@ -345,7 +351,7 @@ class AcademicAgent(AgentProtocol):
             latency_ms=round(step_latency_ms, 2),
         )
         context.add_step(step)
-        self._notify_step_completed(context.run_id, step)
+        self._notify_step_completed(context.run_id, step, context)
 
         # Transition back to PLANNING for the next turn
         context.transition_to(
@@ -386,7 +392,7 @@ class AcademicAgent(AgentProtocol):
                 latency_ms=round(step_latency_ms, 2),
             )
             context.add_step(synth_step)
-            self._notify_step_completed(context.run_id, synth_step)
+            self._notify_step_completed(context.run_id, synth_step, context)
 
             # Invariant: TERMINATED_SUCCESS strictly requires an actual AcademicAnswer instance
             if not isinstance(academic_ans, AcademicAnswer):
@@ -496,7 +502,7 @@ class AcademicAgent(AgentProtocol):
                 latency_ms=round(step_latency_ms, 2),
             )
             context.add_step(failed_step)
-            self._notify_step_completed(context.run_id, failed_step)
+            self._notify_step_completed(context.run_id, failed_step, context)
 
             context.transition_to(
                 AgentTerminalState.TERMINATED_ERROR,
@@ -515,22 +521,31 @@ class AcademicAgent(AgentProtocol):
             except Exception:
                 pass
 
-    def _notify_run_started(self, run_id: str, query: str) -> None:
-        for obs in self.observers:
+    def _notify_run_started(
+        self, run_id: str, query: str, context: Optional[AgentExecutionContext] = None
+    ) -> None:
+        all_obs = self.observers + (list(context.observers) if context else [])
+        for obs in all_obs:
             try:
                 obs.on_run_started(run_id, query)
             except Exception as obs_exc:
                 logger.warning("Observer on_run_started raised: %s", obs_exc)
 
-    def _notify_step_completed(self, run_id: str, step: AgentStep) -> None:
-        for obs in self.observers:
+    def _notify_step_completed(
+        self, run_id: str, step: AgentStep, context: Optional[AgentExecutionContext] = None
+    ) -> None:
+        all_obs = self.observers + (list(context.observers) if context else [])
+        for obs in all_obs:
             try:
                 obs.on_step_completed(run_id, step)
             except Exception as obs_exc:
                 logger.warning("Observer on_step_completed raised: %s", obs_exc)
 
-    def _notify_run_completed(self, run_id: str, trace: AgentTrace) -> None:
-        for obs in self.observers:
+    def _notify_run_completed(
+        self, run_id: str, trace: AgentTrace, context: Optional[AgentExecutionContext] = None
+    ) -> None:
+        all_obs = self.observers + (list(context.observers) if context else [])
+        for obs in all_obs:
             try:
                 obs.on_run_completed(run_id, trace)
             except Exception as obs_exc:

@@ -3,7 +3,7 @@
 from enum import Enum
 from types import MappingProxyType
 from typing import Any, Mapping
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
 
 
 class MessageRole(str, Enum):
@@ -149,6 +149,10 @@ class LLMResponse(BaseModel):
         if isinstance(v, Mapping) and not isinstance(v, MappingProxyType):
             return MappingProxyType(dict(v))
         return v
+
+    @field_serializer("metadata")
+    def _serialize_metadata(self, v: Any) -> dict[str, Any]:
+        return dict(v) if isinstance(v, Mapping) else {}
 
 
 # Typed Exception Hierarchy
