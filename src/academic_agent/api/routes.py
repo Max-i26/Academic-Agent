@@ -2,9 +2,11 @@
 
 import asyncio
 import logging
+from pathlib import Path
 from typing import AsyncGenerator, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import HTMLResponse
 from sse_starlette.sse import EventSourceResponse, ServerSentEvent
 
 from academic_agent.api.dependencies import get_agent_service
@@ -159,6 +161,26 @@ async def list_runs(
 async def health_check() -> HealthResponse:
     """Diagnostic readiness and health check."""
     return HealthResponse(status="ok", service="academic-agent", version="0.1.0")
+
+
+_WORKSTATION_HTML_PATH = Path(__file__).parent.parent / "ui" / "workstation.html"
+
+
+@router.get(
+    "/workstation",
+    response_class=HTMLResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Student Research Workstation UI",
+    description="Serves the non-AI-slop scholarly research workstation interface.",
+)
+async def serve_workstation() -> HTMLResponse:
+    """Serve the standalone research workstation HTML."""
+    if not _WORKSTATION_HTML_PATH.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workstation UI template not found on server.",
+        )
+    return HTMLResponse(content=_WORKSTATION_HTML_PATH.read_text(encoding="utf-8"))
 
 
 __all__ = ["router"]

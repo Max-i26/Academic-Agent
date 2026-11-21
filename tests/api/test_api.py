@@ -342,6 +342,15 @@ class TestHealthEndpoint:
         assert "/api/v1/runs/{run_id}" in schema["paths"]
         assert "/api/v1/runs" in schema["paths"]
         assert "/api/v1/health" in schema["paths"]
+        assert "/api/v1/workstation" in schema["paths"]
+
+    def test_workstation_ui_endpoint(self, client):
+        response = client.get("/api/v1/workstation")
+        assert response.status_code == status.HTTP_200_OK
+        assert "text/html" in response.headers["content-type"]
+        assert "Academic-Agent Workstation" in response.text
+        assert "ReAct Execution Telemetry" in response.text
+        assert "Slide Inspector" in response.text
 
 
 # ============================================================================
