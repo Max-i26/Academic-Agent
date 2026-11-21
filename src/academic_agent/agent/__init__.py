@@ -20,6 +20,8 @@ from academic_agent.agent.models import (
 )
 from academic_agent.agent.protocols import (
     ToolProtocol,
+    ToolRegistryProtocol,
+    ToolDispatcherProtocol,
     StepPlannerProtocol,
     ExecutionBudgetTrackerProtocol,
     AgentMemoryProtocol,
@@ -27,13 +29,32 @@ from academic_agent.agent.protocols import (
 )
 from academic_agent.agent.fsm import AgentStateMachine
 from academic_agent.agent.budget import ExecutionBudgetTracker, BudgetExceededError
+from academic_agent.agent.registry import ToolRegistry
+from academic_agent.agent.dispatcher import ToolDispatcher
+from academic_agent.agent.tools import (
+    BaseAgentTool,
+    AcademicSearchArgs,
+    AcademicSearchTool,
+    EvidenceFilterArgs,
+    EvidenceFilterTool,
+    AcademicSynthesizerArgs,
+    AcademicSynthesizerTool,
+    ClarificationPolicy,
+    QueryAssessment,
+    QueryAssessmentCategory,
+    EvidenceAssessment,
+    EvidenceAssessmentCategory,
+)
 
 __all__ = [
+    # States & Transitions
     "AgentExecutionState",
     "AgentTerminalState",
     "AgentState",
     "InvalidStateTransitionError",
     "VALID_STATE_TRANSITIONS",
+    "AgentStateMachine",
+    # Data Models & Policies
     "ToolErrorCategory",
     "ToolSideEffectPolicy",
     "ToolCall",
@@ -45,12 +66,31 @@ __all__ = [
     "BudgetConfig",
     "BudgetConsumption",
     "AgentTrace",
+    # Protocols
     "ToolProtocol",
+    "ToolRegistryProtocol",
+    "ToolDispatcherProtocol",
     "StepPlannerProtocol",
     "ExecutionBudgetTrackerProtocol",
     "AgentMemoryProtocol",
     "AgentProtocol",
-    "AgentStateMachine",
+    # Budget Engine
     "ExecutionBudgetTracker",
     "BudgetExceededError",
+    # Tool Registry & Dispatcher
+    "ToolRegistry",
+    "ToolDispatcher",
+    # Academic Tools & Policies
+    "BaseAgentTool",
+    "AcademicSearchArgs",
+    "AcademicSearchTool",
+    "EvidenceFilterArgs",
+    "EvidenceFilterTool",
+    "AcademicSynthesizerArgs",
+    "AcademicSynthesizerTool",
+    "ClarificationPolicy",
+    "QueryAssessment",
+    "QueryAssessmentCategory",
+    "EvidenceAssessment",
+    "EvidenceAssessmentCategory",
 ]
