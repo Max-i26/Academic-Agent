@@ -92,6 +92,10 @@ class RetrievalCandidate(BaseModel):
         default_factory=dict,
         description="Original 1-based ranks within each contributing retrieval method.",
     )
+    dense_score: float | None = Field(default=None, description="Raw dense cosine similarity score.")
+    sparse_score: float | None = Field(default=None, description="Raw sparse BM25 score.")
+    rrf_score: float | None = Field(default=None, description="Reciprocal Rank Fusion score.")
+    rerank_score: float | None = Field(default=None, description="Cross-encoder reranking relevance score.")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Record and retrieval diagnostics metadata.")
 
     @property
@@ -115,6 +119,10 @@ class RetrievalCandidate(BaseModel):
             fragment_index=self.fragment_index,
             total_fragments=self.total_fragments,
             score=self.score,
+            dense_score=self.dense_score or self.method_scores.get("dense"),
+            sparse_score=self.sparse_score or self.method_scores.get("sparse"),
+            rrf_score=self.rrf_score or self.method_scores.get("rrf"),
+            rerank_score=self.rerank_score or self.method_scores.get("rerank"),
             retrieval_methods=methods,
             method_scores=scores,
             metadata=dict(self.metadata),
@@ -135,6 +143,10 @@ class Evidence(BaseModel):
     fragment_index: int = Field(default=0, ge=0, description="0-based fragment index.")
     total_fragments: int = Field(default=1, ge=1, description="Total fragments for parent chunk.")
     score: float = Field(description="Final unified or reranked relevance score.")
+    dense_score: float | None = Field(default=None, description="Raw dense cosine similarity score.")
+    sparse_score: float | None = Field(default=None, description="Raw sparse BM25 score.")
+    rrf_score: float | None = Field(default=None, description="Reciprocal Rank Fusion score.")
+    rerank_score: float | None = Field(default=None, description="Cross-encoder reranking relevance score.")
     retrieval_methods: list[str] = Field(
         default_factory=list,
         description="All retrieval methods that surfaced this candidate (e.g. ['dense', 'sparse']).",

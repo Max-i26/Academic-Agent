@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-21T08:56:18Z",
+  "timestamp": "2026-11-21T09:28:04Z",
   "corpus_records": 238,
   "total_queries": 30,
   "macro_metrics": {
@@ -11,7 +11,7 @@
       "map": 0.43749999999999994,
       "recall_at_5": 0.5888888888888889,
       "ndcg_at_5": 0.5178989487403153,
-      "avg_latency_ms": 203.07141953334545
+      "avg_latency_ms": 41.15385389998968
     },
     "sparse": {
       "hit_at_1": 0.26666666666666666,
@@ -21,7 +21,7 @@
       "map": 0.3125,
       "recall_at_5": 0.4111111111111111,
       "ndcg_at_5": 0.341828540999857,
-      "avg_latency_ms": 0.2269849333060847
+      "avg_latency_ms": 0.2974749666615632
     },
     "hybrid": {
       "hit_at_1": 0.36666666666666664,
@@ -31,14 +31,30 @@
       "map": 0.37277777777777776,
       "recall_at_5": 0.4722222222222222,
       "ndcg_at_5": 0.42514852899398564,
-      "avg_latency_ms": 33.1450491999855
+      "avg_latency_ms": 74.08301876667262
+    },
+    "hybrid_rerank": {
+      "hit_at_1": 0.3333333333333333,
+      "hit_at_3": 0.6666666666666666,
+      "hit_at_5": 0.7,
+      "mrr": 0.49,
+      "map": 0.42925925925925923,
+      "recall_at_5": 0.5722222222222223,
+      "ndcg_at_5": 0.4874127207485471,
+      "avg_latency_ms": 1351.9878949333472
     }
   },
   "head_to_head": {
-    "hybrid_wins": 6,
-    "ties": 16,
-    "dense_wins": 8,
-    "net_advantage": -2
+    "rerank_vs_dense": {
+      "wins": 8,
+      "ties": 15,
+      "losses": 7
+    },
+    "rerank_vs_rrf": {
+      "wins": 9,
+      "ties": 18,
+      "losses": 3
+    }
   },
   "category_metrics": {
     "dense": {
@@ -190,7 +206,60 @@
         "mrr": 0.45,
         "ndcg_at_5": 0.45281362451451823
       }
+    },
+    "hybrid_rerank": {
+      "formulas_and_notation": {
+        "count": 5.0,
+        "hit_at_1": 0.4,
+        "hit_at_3": 0.6,
+        "hit_at_5": 0.6,
+        "mrr": 0.5,
+        "ndcg_at_5": 0.5261859507142915
+      },
+      "definitions_and_terminology": {
+        "count": 5.0,
+        "hit_at_1": 0.2,
+        "hit_at_3": 0.4,
+        "hit_at_5": 0.4,
+        "mrr": 0.3,
+        "ndcg_at_5": 0.3212845397009028
+      },
+      "conceptual_explanations": {
+        "count": 5.0,
+        "hit_at_1": 0.4,
+        "hit_at_3": 1.0,
+        "hit_at_5": 1.0,
+        "mrr": 0.6666666666666666,
+        "ndcg_at_5": 0.725513802651838
+      },
+      "calculations_and_workspaces": {
+        "count": 5.0,
+        "hit_at_1": 0.6,
+        "hit_at_3": 0.8,
+        "hit_at_5": 0.8,
+        "mrr": 0.6666666666666666,
+        "ndcg_at_5": 0.6393878947517706
+      },
+      "cross_lecture_and_multi_page": {
+        "count": 5.0,
+        "hit_at_1": 0.0,
+        "hit_at_3": 0.8,
+        "hit_at_5": 0.8,
+        "mrr": 0.36666666666666664,
+        "ndcg_at_5": 0.26466459411862014
+      },
+      "ambiguous_and_variants": {
+        "count": 5.0,
+        "hit_at_1": 0.4,
+        "hit_at_3": 0.4,
+        "hit_at_5": 0.6,
+        "mrr": 0.44000000000000006,
+        "ndcg_at_5": 0.4474395425538592
+      }
     }
+  },
+  "truncation_diagnostics": {
+    "total_truncations": 0
   },
   "per_query_comparison": [
     {
@@ -199,11 +268,8 @@
       "category": "formulas_and_notation",
       "dense_rank": 1,
       "sparse_rank": 1,
-      "hybrid_rank": 1,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 1,
+      "rerank_rank": 1
     },
     {
       "query_id": "q02",
@@ -211,8 +277,8 @@
       "category": "formulas_and_notation",
       "dense_rank": 1,
       "sparse_rank": null,
-      "hybrid_rank": null,
-      "hybrid_methods": []
+      "rrf_rank": null,
+      "rerank_rank": 2
     },
     {
       "query_id": "q03",
@@ -220,8 +286,8 @@
       "category": "formulas_and_notation",
       "dense_rank": 2,
       "sparse_rank": null,
-      "hybrid_rank": null,
-      "hybrid_methods": []
+      "rrf_rank": null,
+      "rerank_rank": null
     },
     {
       "query_id": "q04",
@@ -229,11 +295,8 @@
       "category": "formulas_and_notation",
       "dense_rank": 1,
       "sparse_rank": 1,
-      "hybrid_rank": 1,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 1,
+      "rerank_rank": 1
     },
     {
       "query_id": "q05",
@@ -241,8 +304,8 @@
       "category": "formulas_and_notation",
       "dense_rank": null,
       "sparse_rank": null,
-      "hybrid_rank": null,
-      "hybrid_methods": []
+      "rrf_rank": null,
+      "rerank_rank": null
     },
     {
       "query_id": "q06",
@@ -250,8 +313,8 @@
       "category": "definitions_and_terminology",
       "dense_rank": 2,
       "sparse_rank": null,
-      "hybrid_rank": null,
-      "hybrid_methods": []
+      "rrf_rank": null,
+      "rerank_rank": null
     },
     {
       "query_id": "q07",
@@ -259,8 +322,8 @@
       "category": "definitions_and_terminology",
       "dense_rank": null,
       "sparse_rank": null,
-      "hybrid_rank": null,
-      "hybrid_methods": []
+      "rrf_rank": null,
+      "rerank_rank": null
     },
     {
       "query_id": "q08",
@@ -268,11 +331,8 @@
       "category": "definitions_and_terminology",
       "dense_rank": 1,
       "sparse_rank": 3,
-      "hybrid_rank": 1,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 1,
+      "rerank_rank": 2
     },
     {
       "query_id": "q09",
@@ -280,11 +340,8 @@
       "category": "definitions_and_terminology",
       "dense_rank": 1,
       "sparse_rank": 2,
-      "hybrid_rank": 1,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 1,
+      "rerank_rank": 1
     },
     {
       "query_id": "q10",
@@ -292,8 +349,8 @@
       "category": "definitions_and_terminology",
       "dense_rank": 1,
       "sparse_rank": null,
-      "hybrid_rank": null,
-      "hybrid_methods": []
+      "rrf_rank": null,
+      "rerank_rank": null
     },
     {
       "query_id": "q11",
@@ -301,8 +358,8 @@
       "category": "conceptual_explanations",
       "dense_rank": 3,
       "sparse_rank": null,
-      "hybrid_rank": null,
-      "hybrid_methods": []
+      "rrf_rank": null,
+      "rerank_rank": 3
     },
     {
       "query_id": "q12",
@@ -310,11 +367,8 @@
       "category": "conceptual_explanations",
       "dense_rank": 1,
       "sparse_rank": 2,
-      "hybrid_rank": 1,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 1,
+      "rerank_rank": 1
     },
     {
       "query_id": "q13",
@@ -322,11 +376,8 @@
       "category": "conceptual_explanations",
       "dense_rank": null,
       "sparse_rank": 2,
-      "hybrid_rank": 4,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 4,
+      "rerank_rank": 2
     },
     {
       "query_id": "q14",
@@ -334,11 +385,8 @@
       "category": "conceptual_explanations",
       "dense_rank": 1,
       "sparse_rank": 2,
-      "hybrid_rank": 1,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 1,
+      "rerank_rank": 1
     },
     {
       "query_id": "q15",
@@ -346,11 +394,8 @@
       "category": "conceptual_explanations",
       "dense_rank": 2,
       "sparse_rank": null,
-      "hybrid_rank": 3,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 3,
+      "rerank_rank": 2
     },
     {
       "query_id": "q16",
@@ -358,11 +403,8 @@
       "category": "calculations_and_workspaces",
       "dense_rank": 1,
       "sparse_rank": 1,
-      "hybrid_rank": 1,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 1,
+      "rerank_rank": 1
     },
     {
       "query_id": "q17",
@@ -370,11 +412,8 @@
       "category": "calculations_and_workspaces",
       "dense_rank": 4,
       "sparse_rank": null,
-      "hybrid_rank": 4,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 4,
+      "rerank_rank": 3
     },
     {
       "query_id": "q18",
@@ -382,8 +421,8 @@
       "category": "calculations_and_workspaces",
       "dense_rank": null,
       "sparse_rank": null,
-      "hybrid_rank": null,
-      "hybrid_methods": []
+      "rrf_rank": null,
+      "rerank_rank": null
     },
     {
       "query_id": "q19",
@@ -391,11 +430,8 @@
       "category": "calculations_and_workspaces",
       "dense_rank": 1,
       "sparse_rank": 1,
-      "hybrid_rank": 1,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 1,
+      "rerank_rank": 1
     },
     {
       "query_id": "q20",
@@ -403,11 +439,8 @@
       "category": "calculations_and_workspaces",
       "dense_rank": 1,
       "sparse_rank": 1,
-      "hybrid_rank": 1,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 1,
+      "rerank_rank": 1
     },
     {
       "query_id": "q21",
@@ -415,11 +448,8 @@
       "category": "cross_lecture_and_multi_page",
       "dense_rank": null,
       "sparse_rank": 2,
-      "hybrid_rank": 5,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 5,
+      "rerank_rank": 2
     },
     {
       "query_id": "q22",
@@ -427,8 +457,8 @@
       "category": "cross_lecture_and_multi_page",
       "dense_rank": null,
       "sparse_rank": null,
-      "hybrid_rank": null,
-      "hybrid_methods": []
+      "rrf_rank": null,
+      "rerank_rank": null
     },
     {
       "query_id": "q23",
@@ -436,11 +466,8 @@
       "category": "cross_lecture_and_multi_page",
       "dense_rank": 3,
       "sparse_rank": 4,
-      "hybrid_rank": 2,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 2,
+      "rerank_rank": 2
     },
     {
       "query_id": "q24",
@@ -448,8 +475,8 @@
       "category": "cross_lecture_and_multi_page",
       "dense_rank": null,
       "sparse_rank": 1,
-      "hybrid_rank": null,
-      "hybrid_methods": []
+      "rrf_rank": null,
+      "rerank_rank": 2
     },
     {
       "query_id": "q25",
@@ -457,11 +484,8 @@
       "category": "cross_lecture_and_multi_page",
       "dense_rank": 2,
       "sparse_rank": null,
-      "hybrid_rank": 4,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 4,
+      "rerank_rank": 3
     },
     {
       "query_id": "q26",
@@ -469,8 +493,8 @@
       "category": "ambiguous_and_variants",
       "dense_rank": null,
       "sparse_rank": null,
-      "hybrid_rank": null,
-      "hybrid_methods": []
+      "rrf_rank": null,
+      "rerank_rank": null
     },
     {
       "query_id": "q27",
@@ -478,8 +502,8 @@
       "category": "ambiguous_and_variants",
       "dense_rank": 2,
       "sparse_rank": null,
-      "hybrid_rank": null,
-      "hybrid_methods": []
+      "rrf_rank": null,
+      "rerank_rank": 1
     },
     {
       "query_id": "q28",
@@ -487,11 +511,8 @@
       "category": "ambiguous_and_variants",
       "dense_rank": null,
       "sparse_rank": null,
-      "hybrid_rank": 4,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 4,
+      "rerank_rank": 5
     },
     {
       "query_id": "q29",
@@ -499,11 +520,8 @@
       "category": "ambiguous_and_variants",
       "dense_rank": 2,
       "sparse_rank": 1,
-      "hybrid_rank": 1,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 1,
+      "rerank_rank": 1
     },
     {
       "query_id": "q30",
@@ -511,11 +529,8 @@
       "category": "ambiguous_and_variants",
       "dense_rank": 2,
       "sparse_rank": 1,
-      "hybrid_rank": 1,
-      "hybrid_methods": [
-        "dense",
-        "sparse"
-      ]
+      "rrf_rank": 1,
+      "rerank_rank": null
     }
   ]
 }

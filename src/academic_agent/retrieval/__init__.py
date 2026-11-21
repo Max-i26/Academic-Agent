@@ -21,6 +21,7 @@ from academic_agent.retrieval.sparse.tokenizer import AcademicTokenizer
 from academic_agent.retrieval.sparse.bm25 import BM25Index
 from academic_agent.retrieval.sparse_retriever import SparseRetriever
 from academic_agent.retrieval.fusion import ReciprocalRankFusion
+from academic_agent.retrieval.reranker import CrossEncoderReranker
 from academic_agent.retrieval.pipeline import RetrievalPipeline
 
 __all__ = [
@@ -41,5 +42,6 @@ __all__ = [
     "BM25Index",
     "SparseRetriever",
     "ReciprocalRankFusion",
+    "CrossEncoderReranker",
     "RetrievalPipeline",
 ]

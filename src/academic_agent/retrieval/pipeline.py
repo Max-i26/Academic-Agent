@@ -173,6 +173,13 @@ class RetrievalPipeline:
         sparse_latency_ms = (time.perf_counter() - t_s0) * 1000.0
 
         # 3. Reciprocal Rank Fusion
+        # If reranking will be applied, fuse the full candidate pool so the reranker
+        # receives the complete deduplicated candidate union (dense pool + sparse pool).
+        fusion_top_k = (
+            len(dense_candidates) + len(sparse_candidates)
+            if (apply_rerank and self.reranker is not None)
+            else query.top_k
+        )
         t_f0 = time.perf_counter()
         fused_candidates = self.fusion_strategy.fuse(
             query=query,
@@ -180,13 +187,13 @@ class RetrievalPipeline:
                 "dense": dense_candidates,
                 "sparse": sparse_candidates,
             },
-            top_k=query.top_k,
+            top_k=fusion_top_k,
         )
         fusion_latency_ms = (time.perf_counter() - t_f0) * 1000.0
 
         # 4. Optional Reranking (Stage 4.5 hook)
         rerank_latency_ms: float | None = None
-        final_candidates = fused_candidates
+        final_candidates = fused_candidates[: query.top_k]
         if apply_rerank:
             if self.reranker is not None:
                 t_r0 = time.perf_counter()

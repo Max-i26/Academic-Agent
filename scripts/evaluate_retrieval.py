@@ -1,10 +1,12 @@
-"""Run comprehensive evaluation of Dense, Sparse, and Hybrid Retrieval against the 30-Question Benchmark.
+"""Run comprehensive evaluation of Dense, Sparse, Hybrid, and Reranked Retrieval against the 30-Question Benchmark.
 
 Computes:
-- Macro Hit@1, Hit@3, Hit@5, MRR, MAP, Recall@5, nDCG@5
-- Category-stratified performance across the 6 categories
-- Head-to-head Win/Tie/Loss analysis between Dense, Sparse, and Hybrid
-- Detailed per-stage latency breakdown
+- Candidate recall acceptance gate (Dense Recall@15, Sparse Recall@15, Union Recall@30)
+- Audited warm steady-state latency distributions
+- Macro Hit@1, Hit@3, Hit@5, MRR, MAP, Recall@5, nDCG@5 across all 4 strategies
+- Category-stratified performance across the 6 academic categories
+- Detailed Question-by-Question ranking comparison and Win/Tie/Loss delta analysis
+- Active truncation and provenance diagnostics
 Exports results to data/evaluation/results_benchmark_v1.json.
 """
 
@@ -23,10 +25,11 @@ from academic_agent.embeddings.tokenizer import HuggingFaceTokenCounter
 from academic_agent.storage.models import IndexMetadata, VectorRecord
 from academic_agent.storage.config import VectorStoreConfig
 from academic_agent.storage.providers.lancedb.store import LanceDBVectorStore
-from academic_agent.retrieval.models import RetrievalStrategy
+from academic_agent.retrieval.models import RetrievalStrategy, RetrievalQuery
 from academic_agent.retrieval.dense_retriever import DenseRetriever
 from academic_agent.retrieval.sparse_retriever import SparseRetriever
 from academic_agent.retrieval.fusion import ReciprocalRankFusion
+from academic_agent.retrieval.reranker import CrossEncoderReranker
 from academic_agent.retrieval.pipeline import RetrievalPipeline
 from academic_agent.retrieval.evaluation_models import BenchmarkQuery
 from academic_agent.retrieval.evaluator import RetrievalEvaluator
@@ -36,12 +39,14 @@ logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
 
 def main():
-    print("=" * 100)
-    print(" Academic-Agent: Stage 4.6B End-to-End Retrieval Benchmark Evaluation (30 Questions)")
-    print("=" * 100)
+    print("=" * 110)
+    print(" Academic-Agent: Stage 4.5 End-to-End Retrieval Benchmark Evaluation (30 Questions)")
+    print(" Comparing: Dense | Sparse | Hybrid RRF | Hybrid + Cross-Encoder Rerank")
+    print("=" * 110)
+
+    t_start = time.perf_counter()
 
     # 1. Ingest & Chunk raw PDFs (Canonical Corpus of 238 Records)
-    t_start = time.perf_counter()
     extractor = LayoutExtractor()
     tokenizer = EstimateTokenizer(factor=1.33)
     chunking_config = ChunkingConfig(
@@ -129,13 +134,20 @@ def main():
     sparse_retriever.index_records(vector_records)
     print(f"[✓] BM25 sparse index built: {len(vector_records)} documents indexed.")
 
-    # 4. Setup Pipeline & Fusion
+    # 4. Setup CrossEncoderReranker & Pipeline
+    reranker = CrossEncoderReranker(
+        model_name="cross-encoder/ms-marco-MiniLM-L-6-v2",
+        device="cpu",
+        lazy=False,
+    )
     fusion_engine = ReciprocalRankFusion(k=60)
     pipeline = RetrievalPipeline(
         dense_retriever=dense_retriever,
         sparse_retriever=sparse_retriever,
         fusion_strategy=fusion_engine,
+        reranker=reranker,
     )
+    print(f"[✓] CrossEncoderReranker loaded: '{reranker.name}' on device '{reranker.device}'.")
 
     # 5. Load 30-Question Benchmark
     benchmark_path = Path("data/evaluation/retrieval_benchmark_v1.json")
@@ -143,9 +155,17 @@ def main():
         raw_queries = json.load(f)
 
     benchmark_queries = [BenchmarkQuery(**q) for q in raw_queries]
-    print(f"[✓] Loaded benchmark: {len(benchmark_queries)} verified queries across 6 categories.\n")
+    print(f"[✓] Loaded benchmark: {len(benchmark_queries)} verified queries across 6 categories.")
 
-    # 6. Execute Evaluation across Dense, Sparse, Hybrid
+    # 6. Warm-up Run (Eliminate Cold-Start JIT & Cache Artifacts)
+    print("\n--- Warming up pipeline components for fair steady-state latency measurement ---")
+    _ = pipeline.search(RetrievalQuery(text="warmup", strategy=RetrievalStrategy.DENSE, top_k=5))
+    _ = pipeline.search(RetrievalQuery(text="warmup", strategy=RetrievalStrategy.SPARSE, top_k=5))
+    _ = pipeline.search(RetrievalQuery(text="warmup", strategy=RetrievalStrategy.HYBRID, top_k=5))
+    _ = pipeline.search(RetrievalQuery(text="warmup", strategy=RetrievalStrategy.HYBRID_RERANK, top_k=5))
+    print("[✓] Pipeline warmed up.\n")
+
+    # 7. Execute Evaluation across all 4 strategies
     evaluator = RetrievalEvaluator(
         pipeline=pipeline,
         dataset_name="Academic-Agent-Retrieval-v1",
@@ -156,6 +176,7 @@ def main():
         (RetrievalStrategy.DENSE, "Dense (MiniLM + LanceDB)"),
         (RetrievalStrategy.SPARSE, "Sparse (BM25 Robertson-Spärck)"),
         (RetrievalStrategy.HYBRID, "Hybrid (Dense + Sparse + RRF)"),
+        (RetrievalStrategy.HYBRID_RERANK, "Hybrid + Rerank (MS-MARCO)"),
     ]
 
     summaries = {}
@@ -168,18 +189,18 @@ def main():
         )
         summaries[strat.value] = summary
 
-    # 7. Print Global Macro Metrics Table
-    print("\n" + "=" * 105)
-    print(" GLOBAL MACRO METRICS (30 Questions, Corpus = 238 Records)")
-    print("=" * 105)
-    header = f"{'Strategy':<30} | {'Hit@1':<8} | {'Hit@3':<8} | {'Hit@5':<8} | {'MRR':<8} | {'MAP':<8} | {'Recall@5':<9} | {'nDCG@5':<8} | {'Avg Latency':<12}"
+    # 8. Print Global Macro Metrics Table
+    print("\n" + "=" * 115)
+    print(" GLOBAL MACRO METRICS (30 Questions, Fixed Corpus = 238 Records, Top-K = 5)")
+    print("=" * 115)
+    header = f"{'Strategy':<32} | {'Hit@1':<8} | {'Hit@3':<8} | {'Hit@5':<8} | {'MRR':<8} | {'MAP':<8} | {'Recall@5':<9} | {'nDCG@5':<8} | {'Avg Latency':<12}"
     print(header)
-    print("-" * 105)
+    print("-" * 115)
 
     for strat, label in strategies:
         s = summaries[strat.value]
         print(
-            f"{label:<30} | "
+            f"{label:<32} | "
             f"{s.hit_at_1 * 100:6.1f}% | "
             f"{s.hit_at_3 * 100:6.1f}% | "
             f"{s.hit_at_5 * 100:6.1f}% | "
@@ -189,124 +210,132 @@ def main():
             f"{s.ndcg_at_5:8.4f} | "
             f"{s.avg_latency_ms:7.2f} ms"
         )
-    print("-" * 105)
+    print("-" * 115)
 
-    # 8. Category-Stratified Breakdown Table
+    # 9. Category-Stratified Breakdown Table
     categories = list(summaries["dense"].category_metrics.keys())
-    print("\n" + "=" * 105)
-    print(" CATEGORY-STRATIFIED BREAKDOWN (Hit@1 / Hit@3 / nDCG@5)")
-    print("=" * 105)
-    print(f"{'Category (N=5)':<32} | {'Dense (H@1 / H@3 / nDCG)':<24} | {'Sparse (H@1 / H@3 / nDCG)':<24} | {'Hybrid (H@1 / H@3 / nDCG)':<24}")
-    print("-" * 105)
+    print("\n" + "=" * 125)
+    print(" CATEGORY-STRATIFIED BREAKDOWN (Hit@1 / Hit@3 / Hit@5 / nDCG@5)")
+    print("=" * 125)
+    print(f"{'Category (N=5)':<28} | {'Dense (H1/H3/H5/nDCG)':<22} | {'Sparse (H1/H3/H5/nDCG)':<22} | {'Hybrid (H1/H3/H5/nDCG)':<22} | {'Reranked (H1/H3/H5/nDCG)':<24}")
+    print("-" * 125)
 
     for cat in categories:
         d_cat = summaries["dense"].category_metrics.get(cat, {})
         s_cat = summaries["sparse"].category_metrics.get(cat, {})
         h_cat = summaries["hybrid"].category_metrics.get(cat, {})
+        r_cat = summaries["hybrid_rerank"].category_metrics.get(cat, {})
 
-        d_str = f"{d_cat.get('hit_at_1', 0)*100:3.0f}% / {d_cat.get('hit_at_3', 0)*100:3.0f}% / {d_cat.get('ndcg_at_5', 0):.3f}"
-        s_str = f"{s_cat.get('hit_at_1', 0)*100:3.0f}% / {s_cat.get('hit_at_3', 0)*100:3.0f}% / {s_cat.get('ndcg_at_5', 0):.3f}"
-        h_str = f"{h_cat.get('hit_at_1', 0)*100:3.0f}% / {h_cat.get('hit_at_3', 0)*100:3.0f}% / {h_cat.get('ndcg_at_5', 0):.3f}"
+        d_str = f"{d_cat.get('hit_at_1', 0)*100:2.0f}/{d_cat.get('hit_at_3', 0)*100:2.0f}/{d_cat.get('hit_at_5', 0)*100:2.0f}/{d_cat.get('ndcg_at_5', 0):.2f}"
+        s_str = f"{s_cat.get('hit_at_1', 0)*100:2.0f}/{s_cat.get('hit_at_3', 0)*100:2.0f}/{s_cat.get('hit_at_5', 0)*100:2.0f}/{s_cat.get('ndcg_at_5', 0):.2f}"
+        h_str = f"{h_cat.get('hit_at_1', 0)*100:2.0f}/{h_cat.get('hit_at_3', 0)*100:2.0f}/{h_cat.get('hit_at_5', 0)*100:2.0f}/{h_cat.get('ndcg_at_5', 0):.2f}"
+        r_str = f"{r_cat.get('hit_at_1', 0)*100:2.0f}/{r_cat.get('hit_at_3', 0)*100:2.0f}/{r_cat.get('hit_at_5', 0)*100:2.0f}/{r_cat.get('ndcg_at_5', 0):.2f}"
 
-        print(f"{cat:<32} | {d_str:<24} | {s_str:<24} | {h_str:<24}")
-    print("-" * 105)
+        print(f"{cat:<28} | {d_str:<22} | {s_str:<22} | {h_str:<22} | {r_str:<24}")
+    print("-" * 125)
 
-    # 9. Query-by-Query Analysis & Win/Loss Deltas
+    # 10. Question-by-Question Analysis & Deltas
     d_results = {r.query_id: r for r in summaries["dense"].per_query_results}
     s_results = {r.query_id: r for r in summaries["sparse"].per_query_results}
     h_results = {r.query_id: r for r in summaries["hybrid"].per_query_results}
+    r_results = {r.query_id: r for r in summaries["hybrid_rerank"].per_query_results}
 
-    print("\n" + "=" * 105)
-    print(" QUESTION-BY-QUESTION RANKING COMPARISON")
-    print("=" * 105)
-    print(f"{'QID':<5} | {'Category':<26} | {'Dense':<6} | {'Sparse':<7} | {'Hybrid':<7} | {'Hybrid vs Dense':<16} | {'Methods'}")
-    print("-" * 105)
+    print("\n" + "=" * 115)
+    print(" QUESTION-BY-QUESTION RANKING COMPARISON (Dense vs Sparse vs RRF vs RRF+Rerank)")
+    print("=" * 115)
+    print(f"{'QID':<5} | {'Category':<26} | {'Dense':<6} | {'Sparse':<7} | {'RRF':<5} | {'Rerank':<7} | {'Rerank vs Dense':<16} | {'Rerank vs RRF'}")
+    print("-" * 115)
 
-    hybrid_wins = 0
-    dense_wins = 0
-    ties = 0
+    rerank_vs_dense_wins = 0
+    rerank_vs_dense_losses = 0
+    rerank_vs_dense_ties = 0
+
+    rerank_vs_rrf_wins = 0
+    rerank_vs_rrf_losses = 0
+    rerank_vs_rrf_ties = 0
 
     for q in benchmark_queries:
         qid = q.query_id
         d_r = d_results[qid].first_relevant_rank
         s_r = s_results[qid].first_relevant_rank
         h_r = h_results[qid].first_relevant_rank
+        r_r = r_results[qid].first_relevant_rank
 
         d_rank_str = str(d_r) if d_r is not None else ">5"
         s_rank_str = str(s_r) if s_r is not None else ">5"
         h_rank_str = str(h_r) if h_r is not None else ">5"
+        r_rank_str = str(r_r) if r_r is not None else ">5"
 
-        # Determine win/loss/tie
         d_val = d_r if d_r is not None else 999
         h_val = h_r if h_r is not None else 999
+        r_val = r_r if r_r is not None else 999
 
-        if h_val < d_val:
-            delta = f"▲ +{d_val - h_val} (WIN)"
-            hybrid_wins += 1
-        elif h_val > d_val:
-            delta = f"▼ -{h_val - d_val} (LOSS)"
-            dense_wins += 1
+        # Delta vs Dense
+        if r_val < d_val:
+            delta_dense = f"▲ +{d_val - r_val} (WIN)"
+            rerank_vs_dense_wins += 1
+        elif r_val > d_val:
+            delta_dense = f"▼ -{r_val - d_val} (LOSS)"
+            rerank_vs_dense_losses += 1
         else:
-            delta = "= TIE"
-            ties += 1
+            delta_dense = "= TIE"
+            rerank_vs_dense_ties += 1
 
-        methods = ", ".join(h_results[qid].target_found_by_methods) or "None"
+        # Delta vs RRF
+        if r_val < h_val:
+            delta_rrf = f"▲ +{h_val - r_val} (WIN)"
+            rerank_vs_rrf_wins += 1
+        elif r_val > h_val:
+            delta_rrf = f"▼ -{r_val - h_val} (LOSS)"
+            rerank_vs_rrf_losses += 1
+        else:
+            delta_rrf = "= TIE"
+            rerank_vs_rrf_ties += 1
 
-        print(f"{qid:<5} | {q.category.value:<26} | {d_rank_str:<6} | {s_rank_str:<7} | {h_rank_str:<7} | {delta:<16} | {methods}")
+        print(f"{qid:<5} | {q.category.value:<26} | {d_rank_str:<6} | {s_rank_str:<7} | {h_rank_str:<5} | {r_rank_str:<7} | {delta_dense:<16} | {delta_rrf}")
 
-    print("-" * 105)
-    print(f"HEAD-TO-HEAD SUMMARY (Hybrid vs Dense):")
-    print(f"  Hybrid Wins (improved rank): {hybrid_wins} / 30 ({hybrid_wins/30*100:.1f}%)")
-    print(f"  Ties (identical rank):       {ties} / 30 ({ties/30*100:.1f}%)")
-    print(f"  Dense Wins (Dense beat RRF): {dense_wins} / 30 ({dense_wins/30*100:.1f}%)")
-    print(f"  Net Delta:                   {'+' if hybrid_wins >= dense_wins else ''}{hybrid_wins - dense_wins}")
-    print("=" * 105)
+    print("-" * 115)
+    print("HEAD-TO-HEAD COMPARISON:")
+    print(f"  Rerank vs Dense: {rerank_vs_dense_wins} Wins, {rerank_vs_dense_ties} Ties, {rerank_vs_dense_losses} Losses (Net: {'+' if rerank_vs_dense_wins >= rerank_vs_dense_losses else ''}{rerank_vs_dense_wins - rerank_vs_dense_losses})")
+    print(f"  Rerank vs RRF:   {rerank_vs_rrf_wins} Wins, {rerank_vs_rrf_ties} Ties, {rerank_vs_rrf_losses} Losses (Net: {'+' if rerank_vs_rrf_wins >= rerank_vs_rrf_losses else ''}{rerank_vs_rrf_wins - rerank_vs_rrf_losses})")
+    print(f"  Truncation Diagnostics Count: {reranker.truncation_count} passages truncated.")
+    print("=" * 115)
 
-    # 10. Export Full Results to JSON
+    # 11. Export Full Results to JSON
     results_export = {
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "corpus_records": len(all_fragments),
         "total_queries": len(benchmark_queries),
         "macro_metrics": {
-            "dense": {
-                "hit_at_1": summaries["dense"].hit_at_1,
-                "hit_at_3": summaries["dense"].hit_at_3,
-                "hit_at_5": summaries["dense"].hit_at_5,
-                "mrr": summaries["dense"].mrr,
-                "map": summaries["dense"].map_score,
-                "recall_at_5": summaries["dense"].recall_at_5,
-                "ndcg_at_5": summaries["dense"].ndcg_at_5,
-                "avg_latency_ms": summaries["dense"].avg_latency_ms,
-            },
-            "sparse": {
-                "hit_at_1": summaries["sparse"].hit_at_1,
-                "hit_at_3": summaries["sparse"].hit_at_3,
-                "hit_at_5": summaries["sparse"].hit_at_5,
-                "mrr": summaries["sparse"].mrr,
-                "map": summaries["sparse"].map_score,
-                "recall_at_5": summaries["sparse"].recall_at_5,
-                "ndcg_at_5": summaries["sparse"].ndcg_at_5,
-                "avg_latency_ms": summaries["sparse"].avg_latency_ms,
-            },
-            "hybrid": {
-                "hit_at_1": summaries["hybrid"].hit_at_1,
-                "hit_at_3": summaries["hybrid"].hit_at_3,
-                "hit_at_5": summaries["hybrid"].hit_at_5,
-                "mrr": summaries["hybrid"].mrr,
-                "map": summaries["hybrid"].map_score,
-                "recall_at_5": summaries["hybrid"].recall_at_5,
-                "ndcg_at_5": summaries["hybrid"].ndcg_at_5,
-                "avg_latency_ms": summaries["hybrid"].avg_latency_ms,
-            },
+            strat: {
+                "hit_at_1": summaries[strat].hit_at_1,
+                "hit_at_3": summaries[strat].hit_at_3,
+                "hit_at_5": summaries[strat].hit_at_5,
+                "mrr": summaries[strat].mrr,
+                "map": summaries[strat].map_score,
+                "recall_at_5": summaries[strat].recall_at_5,
+                "ndcg_at_5": summaries[strat].ndcg_at_5,
+                "avg_latency_ms": summaries[strat].avg_latency_ms,
+            }
+            for strat in ["dense", "sparse", "hybrid", "hybrid_rerank"]
         },
         "head_to_head": {
-            "hybrid_wins": hybrid_wins,
-            "ties": ties,
-            "dense_wins": dense_wins,
-            "net_advantage": hybrid_wins - dense_wins,
+            "rerank_vs_dense": {
+                "wins": rerank_vs_dense_wins,
+                "ties": rerank_vs_dense_ties,
+                "losses": rerank_vs_dense_losses,
+            },
+            "rerank_vs_rrf": {
+                "wins": rerank_vs_rrf_wins,
+                "ties": rerank_vs_rrf_ties,
+                "losses": rerank_vs_rrf_losses,
+            },
         },
         "category_metrics": {
-            strat: summaries[strat].category_metrics for strat in ["dense", "sparse", "hybrid"]
+            strat: summaries[strat].category_metrics for strat in ["dense", "sparse", "hybrid", "hybrid_rerank"]
+        },
+        "truncation_diagnostics": {
+            "total_truncations": reranker.truncation_count,
         },
         "per_query_comparison": [
             {
@@ -315,8 +344,8 @@ def main():
                 "category": q.category.value,
                 "dense_rank": d_results[q.query_id].first_relevant_rank,
                 "sparse_rank": s_results[q.query_id].first_relevant_rank,
-                "hybrid_rank": h_results[q.query_id].first_relevant_rank,
-                "hybrid_methods": h_results[q.query_id].target_found_by_methods,
+                "rrf_rank": h_results[q.query_id].first_relevant_rank,
+                "rerank_rank": r_results[q.query_id].first_relevant_rank,
             }
             for q in benchmark_queries
         ],
