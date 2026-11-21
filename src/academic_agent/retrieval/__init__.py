@@ -17,6 +17,9 @@ from academic_agent.retrieval.protocols import (
     RetrievalPipelineProtocol,
 )
 from academic_agent.retrieval.dense_retriever import DenseRetriever
+from academic_agent.retrieval.sparse.tokenizer import AcademicTokenizer
+from academic_agent.retrieval.sparse.bm25 import BM25Index
+from academic_agent.retrieval.sparse_retriever import SparseRetriever
 
 __all__ = [
     "RetrievalStrategy",
@@ -32,4 +35,7 @@ __all__ = [
     "RerankerProtocol",
     "RetrievalPipelineProtocol",
     "DenseRetriever",
+    "AcademicTokenizer",
+    "BM25Index",
+    "SparseRetriever",
 ]
