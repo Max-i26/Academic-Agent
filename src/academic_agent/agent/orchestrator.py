@@ -331,7 +331,19 @@ class AcademicAgent(AgentProtocol):
             reason=f"Dispatching tool {tool_call.tool_name}",
         )
 
-        tool_result = self.dispatcher.dispatch(tool_call, budget_tracker=context.budget_tracker)
+        effective_call = tool_call
+        if context.config.filters and tool_call.tool_name == "academic_search":
+            merged_args = dict(tool_call.arguments)
+            for k, v in context.config.filters.items():
+                if k not in merged_args or merged_args[k] is None:
+                    merged_args[k] = v
+            effective_call = ToolCall(
+                call_id=tool_call.call_id,
+                tool_name=tool_call.tool_name,
+                arguments=merged_args,
+            )
+
+        tool_result = self.dispatcher.dispatch(effective_call, budget_tracker=context.budget_tracker)
 
         context.transition_to(
             AgentExecutionState.OBSERVATION_PROCESSING,

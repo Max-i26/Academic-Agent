@@ -91,7 +91,7 @@ def create_app(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "error": "Internal Server Error",
-                "detail": str(exc),
+                "detail": "An internal server error occurred while processing the request.",
             },
         )
 

@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 import threading
 import time
-from typing import List, Optional, Sequence, Tuple
+from typing import Any, List, Mapping, Optional, Sequence, Tuple
 import uuid
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -72,6 +72,10 @@ class AgentRunConfig(BaseModel):
         ge=1,
         le=10,
         description="Maximum consecutive policy rejections before forcing graceful abstention.",
+    )
+    filters: Optional[Mapping[str, Any]] = Field(
+        default=None,
+        description="Optional corpus scoping filters (e.g. course_id, lecture_id) to apply to retrieval.",
     )
 
 

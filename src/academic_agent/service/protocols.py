@@ -1,6 +1,6 @@
 """Service layer protocols and interface contracts."""
 
-from typing import Iterator, List, Optional, Protocol, runtime_checkable
+from typing import AsyncIterator, Iterator, List, Optional, Protocol, runtime_checkable
 
 from academic_agent.service.models import (
     QueryRequest,
@@ -22,8 +22,16 @@ class AgentServiceProtocol(Protocol):
         """Execute query run and yield real-time streaming lifecycle events."""
         ...
 
+    def stream_query_async(self, request: QueryRequest) -> AsyncIterator[StreamEvent]:
+        """Asynchronously stream real-time events via native async queue bridge."""
+        ...
+
     def cancel_run(self, run_id: str, reason: Optional[str] = None) -> bool:
         """Request cooperative cancellation for an active execution run."""
+        ...
+
+    def is_active(self, run_id: str) -> bool:
+        """Check if a run is currently active."""
         ...
 
     def get_run(self, run_id: str) -> Optional[QueryResponse]:

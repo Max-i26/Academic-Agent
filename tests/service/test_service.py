@@ -684,3 +684,97 @@ class TestServiceConcurrency:
             assert run_id in results
             assert results[run_id].status == ServiceRunStatus.COMPLETED
             assert results[run_id].run_id == run_id
+
+
+# ============================================================================
+# Tests: Phase 7.4 Hardening & Gate C Safety
+# ============================================================================
+
+
+class TestServiceHardening:
+    """Verifies atomic run ID reservation, cleanup guarantees, and filter propagation."""
+
+    def test_duplicate_active_run_id_rejected(self, mock_agent_service):
+        run_id = "test_dup_active_run"
+        with mock_agent_service._lock:
+            mock_agent_service._active_tokens[run_id] = CancellationToken()
+
+        assert mock_agent_service.is_active(run_id) is True
+        assert mock_agent_service.get_active_count() >= 1
+
+        req = QueryRequest(query="What is AR(1)?", run_id=run_id)
+        with pytest.raises(ValueError, match="already actively executing"):
+            mock_agent_service.run_query(req)
+
+        with mock_agent_service._lock:
+            mock_agent_service._active_tokens.pop(run_id, None)
+
+    def test_duplicate_completed_run_id_rejected(self, mock_agent_service):
+        run_id = "test_dup_completed_run"
+        req = QueryRequest(query="What is AR(1)?", run_id=run_id)
+        resp = mock_agent_service.run_query(req)
+        assert resp.run_id == run_id
+
+        with pytest.raises(ValueError, match="has already been executed"):
+            mock_agent_service.run_query(req)
+
+    def test_post_registration_cleanup_on_failure(self, mock_agent_service):
+        run_id = "test_cleanup_fail_run"
+        orig_run = mock_agent_service.agent.run
+        try:
+            def broken_run(*args, **kwargs):
+                raise RuntimeError("Simulated execution failure!")
+
+            mock_agent_service.agent.run = broken_run
+
+            req = QueryRequest(query="What is AR(1)?", run_id=run_id)
+            resp = mock_agent_service.run_query(req)
+            assert resp.status == ServiceRunStatus.ERROR
+            assert "Simulated execution failure!" in resp.terminal_reason
+
+            assert mock_agent_service.is_active(run_id) is False
+            assert run_id not in mock_agent_service._active_runs
+        finally:
+            mock_agent_service.agent.run = orig_run
+
+    def test_filter_propagation_to_tool_arguments(self, mock_agent_service):
+        captured_tool_args = []
+        original_dispatch = mock_agent_service.agent.dispatcher.dispatch
+
+        def capturing_dispatch(tool_call, budget_tracker=None):
+            if tool_call.tool_name == "academic_search":
+                captured_tool_args.append(dict(tool_call.arguments))
+            return original_dispatch(tool_call, budget_tracker=budget_tracker)
+
+        mock_agent_service.agent.dispatcher.dispatch = capturing_dispatch
+        try:
+            req = QueryRequest(
+                query="What are the stationarity conditions for an AR(1) process?",
+                filters={"lecture_id": "Lecture_4", "course_id": "STAT601"},
+            )
+            resp = mock_agent_service.run_query(req)
+            assert resp.status == ServiceRunStatus.COMPLETED
+            assert len(captured_tool_args) > 0
+            assert captured_tool_args[0].get("lecture_id") == "Lecture_4"
+            assert captured_tool_args[0].get("course_id") == "STAT601"
+        finally:
+            mock_agent_service.agent.dispatcher.dispatch = original_dispatch
+
+    def test_stream_query_async_execution(self, mock_agent_service):
+        import asyncio
+
+        async def _test():
+            req = QueryRequest(
+                query="What are the stationarity conditions for an AR(1) process?",
+            )
+            events = []
+            async for ev in mock_agent_service.stream_query_async(req):
+                events.append(ev)
+
+            assert len(events) >= 3
+            assert events[0].event_type == StreamEventType.RUN_STARTED
+            assert events[-1].event_type == StreamEventType.RUN_COMPLETED
+            assert events[-1].payload["status"] == ServiceRunStatus.COMPLETED.value
+
+        asyncio.run(_test())
+

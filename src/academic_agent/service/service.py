@@ -7,13 +7,14 @@ Provides clean separation of concerns:
 - Translates engine domain objects into deeply immutable service DTOs.
 """
 
+import asyncio
 from collections import OrderedDict
 from datetime import datetime, timezone
 import logging
 import queue
 import threading
 import time
-from typing import Any, Dict, Iterator, List, Optional, Sequence
+from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Sequence
 import uuid
 
 from academic_agent.agent.context import (
@@ -26,6 +27,8 @@ from academic_agent.agent.models import (
     AgentTerminalState,
     AgentTrace,
     BudgetConfig,
+    BudgetConsumption,
+    TokenAccounting,
 )
 from academic_agent.agent.orchestrator import AcademicAgent
 from academic_agent.agent.protocols import AgentLifecycleObserverProtocol
@@ -48,11 +51,31 @@ logger = logging.getLogger(__name__)
 class _StreamingObserver(AgentLifecycleObserverProtocol):
     """Bridge observer routing agent lifecycle callbacks to a thread-safe streaming queue."""
 
-    def __init__(self, event_queue: queue.Queue, run_id: str) -> None:
+    def __init__(
+        self,
+        event_queue: queue.Queue,
+        run_id: str,
+        asyncio_loop: Optional[asyncio.AbstractEventLoop] = None,
+        asyncio_queue: Optional[asyncio.Queue] = None,
+    ) -> None:
         self.queue = event_queue
         self.run_id = run_id
+        self.asyncio_loop = asyncio_loop
+        self.asyncio_queue = asyncio_queue
         self._step_counter = 0
         self.has_completed = False
+
+    def _emit(self, event: Optional[StreamEvent]) -> None:
+        """Deliver event to both sync queue and optional async queue bridge."""
+        try:
+            self.queue.put(event)
+        except Exception:
+            pass
+        if self.asyncio_loop is not None and self.asyncio_queue is not None:
+            try:
+                self.asyncio_loop.call_soon_threadsafe(self.asyncio_queue.put_nowait, event)
+            except Exception:
+                pass
 
     def on_run_started(self, run_id: str, query: str) -> None:
         event = StreamEvent(
@@ -62,7 +85,7 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
             timestamp=time.time(),
             payload={"query": query, "started_at": datetime.now(timezone.utc).isoformat()},
         )
-        self.queue.put(event)
+        self._emit(event)
 
     def on_step_completed(self, run_id: str, step: AgentStep) -> None:
         self._step_counter += 1
@@ -90,7 +113,7 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
                 step_index=step.step_index,
                 payload=tool_payload,
             )
-            self.queue.put(tool_event)
+            self._emit(tool_event)
 
         # 2. Synthesis event if this was a synthesis step
         if step.state == "ANSWER_SYNTHESIS":
@@ -102,7 +125,7 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
                 step_index=step.step_index,
                 payload={"decision_summary": step.decision_summary},
             )
-            self.queue.put(synth_event)
+            self._emit(synth_event)
 
         # 3. Overall step completed event
         action_type_val = (
@@ -123,7 +146,7 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
                 "authorized": step.authorized,
             },
         )
-        self.queue.put(step_event)
+        self._emit(step_event)
 
     def on_run_completed(self, run_id: str, trace: AgentTrace) -> None:
         now = time.time()
@@ -175,8 +198,8 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
             payload=payload,
         )
         self.has_completed = True
-        self.queue.put(completion_event)
-        self.queue.put(None)  # Sentinel ending queue iteration
+        self._emit(completion_event)
+        self._emit(None)  # Sentinel ending queue iteration
 
 
 class AcademicAgentService:
@@ -214,12 +237,16 @@ class AcademicAgentService:
         )
 
         with self._lock:
+            if run_id in self._active_tokens:
+                raise ValueError(f"Run ID '{run_id}' is already actively executing.")
+            if run_id in self._completed_runs:
+                raise ValueError(f"Run ID '{run_id}' has already been executed.")
             self._active_tokens[run_id] = token
             self._active_runs[run_id] = run_summary
 
-        config = self._build_agent_config(request)
-
+        response: Optional[QueryResponse] = None
         try:
+            config = self._build_agent_config(request)
             trace = self.agent.run(
                 query=request.query,
                 cancellation_token=token,
@@ -238,31 +265,51 @@ class AcademicAgentService:
                 terminal_reason=f"Service error: {str(exc)}",
                 answer_text=f"An unexpected error occurred during execution: {str(exc)}",
             )
+            if observers:
+                for obs in observers:
+                    try:
+                        err_trace = AgentTrace(
+                            run_id=run_id,
+                            query=request.query,
+                            terminal_state=AgentTerminalState.TERMINATED_ERROR.value,
+                            refusal_explanation=f"Execution error: {str(exc)}",
+                            budget_consumed=BudgetConsumption(
+                                token_usage=TokenAccounting(total_tokens=0),
+                                wall_time_seconds=0.0,
+                            ),
+                            total_latency_ms=0.0,
+                            steps=(),
+                            transitions=(),
+                        )
+                        obs.on_run_completed(run_id, err_trace)
+                    except Exception:
+                        pass
+        finally:
+            with self._lock:
+                self._active_tokens.pop(run_id, None)
+                self._active_runs.pop(run_id, None)
 
-        with self._lock:
-            self._active_tokens.pop(run_id, None)
-            self._active_runs.pop(run_id, None)
+                # Record completed response & summary if available
+                if response is not None:
+                    self._completed_runs[run_id] = response
+                    completed_summary = RunSummary(
+                        run_id=run_id,
+                        query=request.query,
+                        status=response.status,
+                        created_at_iso=created_at_iso,
+                        completed_at_iso=datetime.now(timezone.utc).isoformat(),
+                        duration_ms=response.duration_ms,
+                        terminal_state=response.terminal_state,
+                        total_tokens=response.total_tokens_used,
+                        total_steps=response.total_steps,
+                    )
+                    self._run_summaries[run_id] = completed_summary
 
-            # Record completed response & summary
-            self._completed_runs[run_id] = response
-            completed_summary = RunSummary(
-                run_id=run_id,
-                query=request.query,
-                status=response.status,
-                created_at_iso=created_at_iso,
-                completed_at_iso=datetime.now(timezone.utc).isoformat(),
-                duration_ms=response.duration_ms,
-                terminal_state=response.terminal_state,
-                total_tokens=response.total_tokens_used,
-                total_steps=response.total_steps,
-            )
-            self._run_summaries[run_id] = completed_summary
-
-            # Prune bounded history
-            while len(self._completed_runs) > self.max_history:
-                self._completed_runs.popitem(last=False)
-            while len(self._run_summaries) > self.max_history:
-                self._run_summaries.popitem(last=False)
+                    # Prune bounded history
+                    while len(self._completed_runs) > self.max_history:
+                        self._completed_runs.popitem(last=False)
+                    while len(self._run_summaries) > self.max_history:
+                        self._run_summaries.popitem(last=False)
 
         return response
 
@@ -272,7 +319,7 @@ class AcademicAgentService:
         # Attach explicit run_id to request so child thread uses it
         req_with_id = request if request.run_id == run_id else request.model_copy(update={"run_id": run_id})
 
-        event_queue: queue.Queue[Optional[StreamEvent]] = queue.Queue()
+        event_queue: queue.Queue[Optional[StreamEvent]] = queue.Queue(maxsize=500)
         observer = _StreamingObserver(event_queue=event_queue, run_id=run_id)
 
         worker_error: List[Exception] = []
@@ -311,6 +358,57 @@ class AcademicAgentService:
             self.cancel_run(run_id, reason="Client disconnected or closed stream.")
             raise
 
+    async def stream_query_async(self, request: QueryRequest) -> AsyncIterator[StreamEvent]:
+        """Asynchronously stream events directly using an asyncio.Queue bridge.
+
+        Completely eliminates thread-to-thread generator races and provides instant
+        cancellation on client disconnect.
+        """
+        run_id = request.run_id or str(uuid.uuid4())
+        req_with_id = (
+            request if request.run_id == run_id else request.model_copy(update={"run_id": run_id})
+        )
+
+        loop = asyncio.get_running_loop()
+        async_queue: asyncio.Queue[Optional[StreamEvent]] = asyncio.Queue(maxsize=500)
+        observer = _StreamingObserver(
+            event_queue=queue.Queue(maxsize=500),
+            run_id=run_id,
+            asyncio_loop=loop,
+            asyncio_queue=async_queue,
+        )
+
+        def _worker() -> None:
+            try:
+                self.run_query(req_with_id, observers=[observer])
+            except Exception as exc:
+                logger.exception("Background worker failure in stream_query_async: %s", exc)
+                err_ev = StreamEvent(
+                    event_id=str(uuid.uuid4()),
+                    event_type=StreamEventType.RUN_FAILED,
+                    run_id=run_id,
+                    timestamp=time.time(),
+                    payload={"error": str(exc)},
+                )
+                loop.call_soon_threadsafe(async_queue.put_nowait, err_ev)
+            finally:
+                if not observer.has_completed:
+                    loop.call_soon_threadsafe(async_queue.put_nowait, None)
+
+        worker_thread = threading.Thread(
+            target=_worker, daemon=True, name=f"agent-async-stream-{run_id[:8]}"
+        )
+        worker_thread.start()
+
+        try:
+            while True:
+                item = await async_queue.get()
+                if item is None:
+                    break
+                yield item
+        finally:
+            self.cancel_run(run_id, reason="SSE client disconnected.")
+
     def cancel_run(self, run_id: str, reason: Optional[str] = None) -> bool:
         """Request cooperative cancellation for an active execution run."""
         with self._lock:
@@ -320,6 +418,16 @@ class AcademicAgentService:
                 logger.info("Cancelled active run %s: %s", run_id, reason)
                 return True
             return False
+
+    def is_active(self, run_id: str) -> bool:
+        """Check if a run is actively executing."""
+        with self._lock:
+            return run_id in self._active_tokens
+
+    def get_active_count(self) -> int:
+        """Return the number of currently active execution runs."""
+        with self._lock:
+            return len(self._active_tokens)
 
     def get_run(self, run_id: str) -> Optional[QueryResponse]:
         """Retrieve the response of a completed run by ID."""
@@ -366,6 +474,7 @@ class AcademicAgentService:
             budget_config=budget_cfg,
             enable_query_screening=self.agent.default_config.enable_query_screening,
             max_consecutive_rejections=self.agent.default_config.max_consecutive_rejections,
+            filters=dict(request.filters) if request.filters else None,
         )
 
     def _build_query_response(self, trace: AgentTrace) -> QueryResponse:

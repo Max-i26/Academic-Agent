@@ -34,6 +34,8 @@ class HealthResponse(BaseModel):
     status: str = Field(default="ok", description="Service readiness indicator.")
     service: str = Field(default="academic-agent", description="Service identifier.")
     version: str = Field(default="0.1.0", description="Academic-Agent version string.")
+    active_runs: Optional[int] = Field(default=None, description="Number of currently active execution runs.")
+    registered_tools: Optional[List[str]] = Field(default=None, description="Registered tool identifiers.")
 
 
 class ErrorResponse(BaseModel):

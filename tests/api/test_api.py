@@ -10,7 +10,7 @@ from fastapi import status
 from fastapi.testclient import TestClient
 import pytest
 
-from academic_agent.agent.context import AgentExecutionContext, AgentRunConfig
+from academic_agent.agent.context import AgentExecutionContext, AgentRunConfig, CancellationToken
 from academic_agent.agent.dispatcher import ToolDispatcher
 from academic_agent.agent.models import (
     AgentExecutionState,
@@ -642,3 +642,84 @@ class TestCorsAndMiddleware:
         )
         assert response.status_code == status.HTTP_200_OK
         assert response.headers["access-control-allow-origin"] == "*"
+
+
+# ============================================================================
+# Tests: Phase 7.4 API Hardening & Concurrency Rejection
+# ============================================================================
+
+
+class TestApiHardening:
+    """Verifies 409 Conflict on duplicate run IDs, health readiness telemetry, and error sanitization."""
+
+    def test_duplicate_completed_run_id_returns_409(self, client):
+        run_id = "test_dup_api_run"
+        res1 = client.post(
+            "/api/v1/query",
+            json={"query": "Explain AR(1) processes.", "run_id": run_id},
+        )
+        assert res1.status_code == status.HTTP_200_OK
+
+        res2 = client.post(
+            "/api/v1/query",
+            json={"query": "Explain AR(1) processes.", "run_id": run_id},
+        )
+        assert res2.status_code == status.HTTP_409_CONFLICT
+        data = res2.json()
+        assert "has already been executed" in data["detail"]
+
+    def test_duplicate_active_run_id_returns_409(self, client, mock_agent_service):
+        run_id = "test_dup_active_api_run"
+        with mock_agent_service._lock:
+            mock_agent_service._active_tokens[run_id] = CancellationToken()
+
+        try:
+            res = client.post(
+                "/api/v1/query",
+                json={"query": "Explain AR(1) processes.", "run_id": run_id},
+            )
+            assert res.status_code == status.HTTP_409_CONFLICT
+            assert "already actively executing" in res.json()["detail"]
+        finally:
+            with mock_agent_service._lock:
+                mock_agent_service._active_tokens.pop(run_id, None)
+
+    def test_stream_duplicate_run_id_returns_409(self, client):
+        run_id = "test_dup_stream_api_run"
+        res1 = client.post(
+            "/api/v1/query",
+            json={"query": "Explain AR(1) processes.", "run_id": run_id},
+        )
+        assert res1.status_code == status.HTTP_200_OK
+
+        res2 = client.post(
+            "/api/v1/query/stream",
+            json={"query": "Explain AR(1) processes.", "run_id": run_id},
+        )
+        assert res2.status_code == status.HTTP_409_CONFLICT
+
+    def test_health_telemetry_readiness(self, client):
+        response = client.get("/api/v1/health")
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["status"] == "ok"
+        assert "active_runs" in data
+        assert "registered_tools" in data
+        assert "academic_search" in data["registered_tools"]
+        assert "academic_synthesizer" in data["registered_tools"]
+
+    def test_generic_unhandled_exception_sanitized(self, mock_agent_service):
+        app = create_app(service=mock_agent_service)
+
+        @app.get("/api/v1/test-crash")
+        async def crash_endpoint():
+            raise RuntimeError("Database password leaked in memory error!")
+
+        client = TestClient(app, raise_server_exceptions=False)
+        response = client.get("/api/v1/test-crash")
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        data = response.json()
+        assert data["error"] == "Internal Server Error"
+        assert "An internal server error occurred" in data["detail"]
+        assert "Database password" not in data["detail"]
+
