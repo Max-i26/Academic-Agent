@@ -10,6 +10,7 @@ from academic_agent.agent.models import (
     BudgetConsumption,
     TokenAccounting,
     ToolCall,
+    unfreeze_data,
 )
 from academic_agent.agent.protocols import ExecutionBudgetTrackerProtocol
 
@@ -125,7 +126,7 @@ class ExecutionBudgetTracker(ExecutionBudgetTrackerProtocol):
 
             # Check duplicate tool call
             if self.config.detect_duplicate_calls:
-                norm_args = json.dumps(tool_call.arguments, sort_keys=True)
+                norm_args = json.dumps(unfreeze_data(tool_call.arguments), sort_keys=True)
                 signature = (tool_call.tool_name.lower().strip(), norm_args)
                 if signature in self._seen_tool_calls:
                     self.duplicate_calls_detected += 1

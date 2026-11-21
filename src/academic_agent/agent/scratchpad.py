@@ -3,9 +3,9 @@
 import html
 import json
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Mapping, Optional
 
-from academic_agent.agent.models import AgentStep, ToolResult
+from academic_agent.agent.models import AgentStep, ToolResult, unfreeze_data
 
 
 def escape_untrusted_content(text: str) -> str:
@@ -39,7 +39,7 @@ def serialize_tool_result(tool_result: ToolResult, max_snippet_length: int = 120
     output = tool_result.output
     tool_name = tool_result.tool_name.lower().strip()
 
-    if isinstance(output, dict):
+    if isinstance(output, (dict, Mapping)):
         if tool_name == "academic_search":
             return _serialize_search_output(output, max_snippet_length)
         elif tool_name == "evidence_filter":
@@ -48,8 +48,8 @@ def serialize_tool_result(tool_result: ToolResult, max_snippet_length: int = 120
             return _serialize_synthesizer_output(output, max_snippet_length)
 
     # Generic dictionary or fallback representation
-    if isinstance(output, (dict, list)):
-        dumped = json.dumps(output, default=str)
+    if isinstance(output, (dict, list, Mapping, tuple)):
+        dumped = json.dumps(unfreeze_data(output), default=str)
         if len(dumped) > 400:
             return dumped[:397] + "..."
         return dumped
@@ -180,7 +180,7 @@ def format_scratchpad(history: List[AgentStep]) -> str:
 
         if step.tool_call:
             tc = step.tool_call
-            args_str = json.dumps(tc.arguments, default=str)
+            args_str = json.dumps(unfreeze_data(tc.arguments), default=str)
             if len(args_str) > 150:
                 args_str = args_str[:147] + "..."
             lines.append(f"Tool Call: {tc.tool_name}({args_str})")

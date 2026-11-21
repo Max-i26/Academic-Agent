@@ -88,6 +88,7 @@ class StepPlannerProtocol(Protocol):
         query: str,
         history: List[AgentStep],
         available_tools: List[ToolProtocol],
+        budget_tracker: Optional["ExecutionBudgetTrackerProtocol"] = None,
     ) -> ProposedAction:
         """Generate next reasoning thought and proposed action."""
         ...

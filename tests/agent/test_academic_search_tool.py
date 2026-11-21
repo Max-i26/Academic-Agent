@@ -81,7 +81,7 @@ class TestAcademicSearchTool:
         assert len(candidates) == 2
         assert candidates[0]["chunk_id"] == "chunk_1"
         assert candidates[0]["score"] == 0.92
-        assert candidates[0]["source_pages"] == [14, 15]
+        assert list(candidates[0]["source_pages"]) == [14, 15]
         assert "Lecture 2" in candidates[0]["citation"]
 
         # Verify pipeline received query

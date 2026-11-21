@@ -38,10 +38,10 @@ class TestCancellationToken:
         # Subsequent cancel calls do not overwrite original reason
         token.cancel("Second reason")
         assert token.reason == "User pressed stop"
+        assert token.is_cancelled is True
 
-        token.reset()
-        assert token.is_cancelled is False
-        assert token.reason is None
+        # Cancellation is strictly monotonic; no reset method exists
+        assert not hasattr(token, "reset")
 
     def test_multithreaded_cancellation_concurrency(self) -> None:
         """Verify thread-safety when multiple threads check and cancel simultaneously."""

@@ -13,6 +13,7 @@ from academic_agent.agent.models import (
     AgentTerminalState,
     ProposedAction,
     VALID_STATE_TRANSITIONS,
+    unfreeze_data,
 )
 from academic_agent.agent.protocols import ExecutionBudgetTrackerProtocol, ToolRegistryProtocol
 
@@ -261,12 +262,12 @@ class DecisionPolicy:
     ) -> tuple[bool, Optional[str]]:
         """Detect identical successful calls or repeated identical failures."""
         call_name = tool_call.tool_name.lower().strip()
-        call_args_json = json.dumps(tool_call.arguments, sort_keys=True, default=str)
+        call_args_json = json.dumps(unfreeze_data(tool_call.arguments), sort_keys=True, default=str)
 
         for step in history:
             if step.tool_call:
                 prev_name = step.tool_call.tool_name.lower().strip()
-                prev_args_json = json.dumps(step.tool_call.arguments, sort_keys=True, default=str)
+                prev_args_json = json.dumps(unfreeze_data(step.tool_call.arguments), sort_keys=True, default=str)
 
                 if prev_name == call_name and prev_args_json == call_args_json:
                     if step.tool_result and step.tool_result.success:

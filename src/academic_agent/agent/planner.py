@@ -55,6 +55,7 @@ class ReActStepPlanner(StepPlannerProtocol):
         query: str,
         history: List[AgentStep],
         available_tools: List[ToolProtocol],
+        budget_tracker: Optional[ExecutionBudgetTrackerProtocol] = None,
     ) -> ProposedAction:
         """Generate next reasoning thought and proposed action.
 
@@ -62,16 +63,18 @@ class ReActStepPlanner(StepPlannerProtocol):
             query: User's academic question.
             history: Complete sequence of past AgentSteps.
             available_tools: Registered tools available to the agent.
+            budget_tracker: Optional per-run execution budget tracker.
 
         Returns:
             Validated ProposedAction object.
         """
+        effective_budget = budget_tracker or self.budget_tracker
         tool_schemas: List[Dict[str, Any]] = [t.get_schema() for t in available_tools]
         scratchpad = format_scratchpad(history)
 
         budget_status: Optional[str] = None
-        if self.budget_tracker:
-            consumption = self.budget_tracker.get_consumption()
+        if effective_budget:
+            consumption = effective_budget.get_consumption()
             budget_status = (
                 f"Iterations: {consumption.iterations} | "
                 f"Tokens: {consumption.token_usage.total_tokens} | "
@@ -93,8 +96,8 @@ class ReActStepPlanner(StepPlannerProtocol):
         # First generation attempt
         response = self.llm_provider.generate(messages, config=config)
 
-        if self.budget_tracker and response.usage:
-            self.budget_tracker.record_tokens(
+        if effective_budget and response.usage:
+            effective_budget.record_tokens(
                 prompt=response.usage.prompt_tokens,
                 completion=response.usage.completion_tokens,
                 is_exact=True,
@@ -113,8 +116,8 @@ class ReActStepPlanner(StepPlannerProtocol):
                 )
                 repair_response = self.llm_provider.generate(repair_messages, config=config)
 
-                if self.budget_tracker and repair_response.usage:
-                    self.budget_tracker.record_tokens(
+                if effective_budget and repair_response.usage:
+                    effective_budget.record_tokens(
                         prompt=repair_response.usage.prompt_tokens,
                         completion=repair_response.usage.completion_tokens,
                         is_exact=True,

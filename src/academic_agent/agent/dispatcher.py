@@ -4,7 +4,7 @@ import concurrent.futures
 import time
 from typing import Optional
 
-from academic_agent.agent.models import ToolCall, ToolErrorCategory, ToolResult
+from academic_agent.agent.models import ToolCall, ToolErrorCategory, ToolResult, unfreeze_data
 from academic_agent.agent.protocols import (
     ExecutionBudgetTrackerProtocol,
     ToolDispatcherProtocol,
@@ -107,7 +107,7 @@ class ToolDispatcher(ToolDispatcherProtocol):
 
         # 5. Isolated Bounded Execution (Non-Negotiable Rules 2 & 3)
         try:
-            future = self._executor.submit(tool.execute, tool_call.arguments)
+            future = self._executor.submit(tool.execute, unfreeze_data(tool_call.arguments))
             result = future.result(timeout=effective_timeout)
 
             # Ensure call_id, tool_name, and latency are accurately set

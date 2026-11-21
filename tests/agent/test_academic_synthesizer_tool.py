@@ -131,7 +131,7 @@ class TestAcademicSynthesizerTool:
         assert out["is_valid_academic_answer"] is True
         assert out["citations_count"] == 1
         assert out["citations"][0]["raw_citation"] == "[E1]"
-        assert out["valid_cited_ids"] == ["E1"]
+        assert list(out["valid_cited_ids"]) == ["E1"]
         assert out["latency_ms"] == 45.2
 
         # Verify underlying call received converted evidence

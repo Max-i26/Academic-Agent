@@ -4,9 +4,33 @@ from datetime import datetime, timezone
 from enum import Enum
 from types import MappingProxyType
 from typing import Any, Dict, FrozenSet, Mapping, Optional, Set, Tuple, Union
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
 
 from academic_agent.generation.synthesis.models import AcademicAnswer
+
+
+def freeze_data(val: Any) -> Any:
+    """Recursively freeze nested mappings and collections into deeply immutable types."""
+    if isinstance(val, (MappingProxyType, frozenset, int, float, str, bool, bytes, type(None))):
+        return val
+    if isinstance(val, Mapping):
+        return MappingProxyType({k: freeze_data(v) for k, v in val.items()})
+    if isinstance(val, (list, tuple)):
+        return tuple(freeze_data(x) for x in val)
+    if isinstance(val, (set, frozenset)):
+        return frozenset(freeze_data(x) for x in val)
+    return val
+
+
+def unfreeze_data(val: Any) -> Any:
+    """Recursively unfreeze mappingproxy and tuple collections for JSON serialization."""
+    if isinstance(val, MappingProxyType):
+        return {k: unfreeze_data(v) for k, v in val.items()}
+    if isinstance(val, tuple):
+        return [unfreeze_data(x) for x in val]
+    if isinstance(val, frozenset):
+        return list(unfreeze_data(x) for x in val)
+    return val
 
 
 class AgentExecutionState(str, Enum):
@@ -128,17 +152,26 @@ class ToolSideEffectPolicy(BaseModel):
 class ToolCall(BaseModel):
     """Structured tool invocation request proposed by planner or authorized by engine."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
     call_id: str = Field(description="Unique call identifier for correlation.")
     tool_name: str = Field(description="Registered tool name.")
-    arguments: Dict[str, Any] = Field(default_factory=dict, description="Validated parameter dictionary.")
+    arguments: Any = Field(default_factory=dict, description="Validated parameter dictionary.")
+
+    @field_validator("arguments", mode="after")
+    @classmethod
+    def deep_freeze_arguments(cls, v: Any) -> Any:
+        return freeze_data(v)
+
+    @field_serializer("arguments")
+    def serialize_arguments(self, v: Any) -> Any:
+        return unfreeze_data(v)
 
 
 class ToolResult(BaseModel):
     """Structured outcome of a tool execution with error isolation."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
     call_id: str = Field(description="Call identifier correlating with ToolCall.")
     tool_name: str = Field(description="Name of executed tool.")
@@ -148,6 +181,15 @@ class ToolResult(BaseModel):
     error: Optional[str] = Field(default=None, description="Alias for error_message.")
     error_category: Optional[ToolErrorCategory] = Field(default=None, description="Categorized failure classification.")
     latency_ms: float = Field(default=0.0, ge=0.0, description="Measured execution duration in milliseconds.")
+
+    @field_validator("output", mode="after")
+    @classmethod
+    def deep_freeze_output(cls, v: Any) -> Any:
+        return freeze_data(v)
+
+    @field_serializer("output")
+    def serialize_output(self, v: Any) -> Any:
+        return unfreeze_data(v)
 
     @model_validator(mode="before")
     @classmethod

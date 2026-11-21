@@ -2,7 +2,7 @@
 
 import logging
 import time
-from typing import List, Optional
+from typing import List, Mapping, Optional
 
 from academic_agent.agent.context import (
     AgentExecutionContext,
@@ -100,6 +100,14 @@ class AcademicAgent(AgentProtocol):
 
     def _execute_lifecycle(self, context: AgentExecutionContext) -> None:
         """Drive the state machine and loop until a terminal state is reached."""
+        # Check cooperative cancellation before any operation begins
+        if context.check_cancellation():
+            context.transition_to(
+                AgentTerminalState.TERMINATED_CANCELLED,
+                reason=context.refusal_explanation or "Cooperative cancellation requested before execution.",
+            )
+            return
+
         # 1. Pre-retrieval query screening
         if context.config.enable_query_screening:
             if self._screen_query(context):
@@ -211,6 +219,7 @@ class AcademicAgent(AgentProtocol):
             query=context.query,
             history=context.steps,
             available_tools=available_tools,
+            budget_tracker=context.budget_tracker,
         )
 
         # 2. Authorization phase (evaluated while in PLANNING)
@@ -361,12 +370,9 @@ class AcademicAgent(AgentProtocol):
         tool_result = self.dispatcher.dispatch(tool_call, budget_tracker=context.budget_tracker)
         step_latency_ms = (time.perf_counter() - step_start_time) * 1000.0
 
-        if tool_result.success and isinstance(tool_result.output, dict):
-            # Extract AcademicAnswer object if attached
+        if tool_result.success and isinstance(tool_result.output, (dict, Mapping)):
             academic_ans = tool_result.output.get("academic_answer")
-            context.final_answer = academic_ans
-
-            is_valid = tool_result.output.get("is_valid_academic_answer", True)
+            is_valid = bool(tool_result.output.get("is_valid_academic_answer", False))
 
             synth_step = AgentStep(
                 step_index=step_index,
@@ -382,16 +388,27 @@ class AcademicAgent(AgentProtocol):
             context.add_step(synth_step)
             self._notify_step_completed(context.run_id, synth_step)
 
-            if is_valid:
+            # Invariant: TERMINATED_SUCCESS strictly requires an actual AcademicAnswer instance
+            if isinstance(academic_ans, AcademicAnswer) and is_valid and academic_ans.answer_text.strip():
+                context.final_answer = academic_ans
                 context.transition_to(
                     AgentTerminalState.TERMINATED_SUCCESS,
                     reason="Grounded answer synthesized with valid citations.",
                 )
-            else:
+            elif isinstance(academic_ans, AcademicAnswer) and not is_valid:
+                context.final_answer = academic_ans
                 context.refusal_explanation = "Retrieved evidence was insufficient for grounded synthesis."
                 context.transition_to(
                     AgentTerminalState.TERMINATED_ABSTENTION,
                     reason="Synthesis produced refusal or partial answer dominated by evidence gaps.",
+                )
+            else:
+                # Malformed output: succeeded but omitted AcademicAnswer instance or validity flag
+                err_msg = "Synthesis tool reported success but failed to provide a valid AcademicAnswer instance."
+                context.refusal_explanation = err_msg
+                context.transition_to(
+                    AgentTerminalState.TERMINATED_ERROR,
+                    reason=err_msg,
                 )
         else:
             # Synthesis tool crashed or timed out

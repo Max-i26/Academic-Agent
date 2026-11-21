@@ -102,7 +102,7 @@ class TestToolDispatcher:
         assert res.success is True
         assert res.call_id == "c1"
         assert res.tool_name == "mock_search"
-        assert res.output["results"] == ["Result for differencing"]
+        assert list(res.output["results"]) == ["Result for differencing"]
         assert res.latency_ms > 0.0
         assert res.error_message is None
 

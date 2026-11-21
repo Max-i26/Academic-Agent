@@ -522,3 +522,263 @@ class TestOrchestratorAdversarialAndConcurrency:
             assert t.terminal_state == AgentTerminalState.TERMINATED_SUCCESS.value
             assert len(t.steps) == 2
             assert t.steps[0].tool_call.arguments["query"] == f"topic_{idx}"
+
+
+    def test_single_agent_instance_concurrent_requests(self) -> None:
+        """Verify a single shared AcademicAgent instance safely handles parallel requests."""
+        registry = ToolRegistry()
+        registry.register(MockAcademicSearchTool())
+        registry.register(MockAcademicSynthesizerTool())
+
+        # Thread-safe mock provider mapping query text to responses
+        class DynamicQueryMockProvider:
+            @property
+            def model_name(self) -> str: return "shared-mock-provider"
+            @property
+            def context_window(self) -> int: return 4096
+            @property
+            def is_available(self) -> bool: return True
+            def load(self) -> None: pass
+            def release(self) -> None: pass
+
+            def generate(self, messages: List[ChatMessage], config: Optional[LLMConfig] = None) -> LLMResponse:
+                content_str = messages[-1].content
+                # Parse query from prompt
+                import re
+                match = re.search(r'### USER QUERY:\s*"([^"]+)"', content_str)
+                query_text = match.group(1) if match else "default"
+
+                if "SEARCH" not in content_str:
+                    # First turn: propose SEARCH
+                    payload = {
+                        "action_rationale": f"Search for {query_text}.",
+                        "decision_summary": f"Search {query_text}.",
+                        "action_type": "SEARCH",
+                        "tool_call": {
+                            "call_id": f"call_s_{abs(hash(query_text))}",
+                            "tool_name": "academic_search",
+                            "arguments": {"query": query_text},
+                        },
+                    }
+                else:
+                    # Second turn: propose SYNTHESIZE
+                    payload = {
+                        "action_rationale": f"Synthesize for {query_text}.",
+                        "decision_summary": f"Synthesize {query_text}.",
+                        "action_type": "SYNTHESIZE",
+                        "tool_call": {
+                            "call_id": f"call_syn_{abs(hash(query_text))}",
+                            "tool_name": "academic_synthesizer",
+                            "arguments": {"query": query_text},
+                        },
+                    }
+
+                return LLMResponse(
+                    content=json.dumps(payload),
+                    role=MessageRole.ASSISTANT,
+                    model_name=self.model_name,
+                    latency_ms=20.0,
+                    usage=LLMUsage(prompt_tokens=100, completion_tokens=30, total_tokens=130),
+                )
+
+        provider = DynamicQueryMockProvider()
+        planner = ReActStepPlanner(llm_provider=provider)
+        # ONE shared AcademicAgent instance
+        shared_agent = AcademicAgent(tool_registry=registry, planner=planner)
+
+        def call_shared_agent(i: int) -> AgentTrace:
+            return shared_agent.run(f"Concurrent academic question {i}")
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [executor.submit(call_shared_agent, i) for i in range(5)]
+            traces = [f.result() for f in futures]
+
+        assert len(traces) == 5
+        run_ids = {t.run_id for t in traces}
+        assert len(run_ids) == 5
+
+        for idx, t in enumerate(traces):
+            assert t.terminal_state == AgentTerminalState.TERMINATED_SUCCESS.value
+            assert t.final_answer is not None
+            assert len(t.steps) == 2
+
+    def test_cancellation_before_run_starts(self) -> None:
+        """Verify cancellation requested before run() begins aborts immediately without query screening."""
+        token = CancellationToken()
+        token.cancel("Cancelled before invocation.")
+
+        provider = MockLLMProvider([])
+        registry = ToolRegistry()
+        planner = ReActStepPlanner(llm_provider=provider)
+        agent = AcademicAgent(tool_registry=registry, planner=planner)
+
+        # Even with an out-of-domain query, cancellation precedes query screening
+        trace = agent.run("Can you give me a recipe for chocolate cake?", cancellation_token=token)
+
+        assert trace.terminal_state == AgentTerminalState.TERMINATED_CANCELLED.value
+        assert "Cancelled before invocation." in (trace.refusal_explanation or "")
+        assert len(trace.steps) == 0
+
+    def test_synthesis_missing_answer_fails_gracefully(self) -> None:
+        """Verify that synthesis tool returning success without an AcademicAnswer instance transitions to ERROR."""
+        class MalformedSynthesizerTool(MockAcademicSynthesizerTool):
+            def execute(self, arguments: dict) -> ToolResult:
+                # Returns success=True, but omits academic_answer!
+                return ToolResult(
+                    call_id="call_syn",
+                    tool_name="academic_synthesizer",
+                    success=True,
+                    output={"answer_text": "text without object", "is_valid_academic_answer": True},
+                )
+
+        resp_1 = json.dumps({
+            "action_rationale": "Search.",
+            "decision_summary": "Search.",
+            "action_type": "SEARCH",
+            "tool_call": {"call_id": "c1", "tool_name": "academic_search", "arguments": {"query": "test"}},
+        })
+        resp_2 = json.dumps({
+            "action_rationale": "Synthesize.",
+            "decision_summary": "Synthesize.",
+            "action_type": "SYNTHESIZE",
+            "tool_call": {"call_id": "c2", "tool_name": "academic_synthesizer", "arguments": {"query": "test"}},
+        })
+
+        provider = MockLLMProvider([resp_1, resp_2])
+        registry = ToolRegistry()
+        registry.register(MockAcademicSearchTool())
+        registry.register(MalformedSynthesizerTool())
+
+        planner = ReActStepPlanner(llm_provider=provider)
+        agent = AcademicAgent(tool_registry=registry, planner=planner)
+
+        trace = agent.run("Explain eigenvalues.")
+        # Must NOT be TERMINATED_SUCCESS!
+        assert trace.terminal_state == AgentTerminalState.TERMINATED_ERROR.value
+        assert trace.final_answer is None
+        assert "failed to provide a valid AcademicAnswer" in (trace.refusal_explanation or "")
+
+    def test_synthesis_invalid_answer_type_fails(self) -> None:
+        """Verify synthesis returning wrong type for academic_answer transitions to ERROR."""
+        class WrongTypeSynthesizerTool(MockAcademicSynthesizerTool):
+            def execute(self, arguments: dict) -> ToolResult:
+                return ToolResult(
+                    call_id="call_syn",
+                    tool_name="academic_synthesizer",
+                    success=True,
+                    output={"academic_answer": "NotAnAcademicAnswerObject", "is_valid_academic_answer": True},
+                )
+
+        resp_1 = json.dumps({
+            "action_rationale": "Search.",
+            "decision_summary": "Search.",
+            "action_type": "SEARCH",
+            "tool_call": {"call_id": "c1", "tool_name": "academic_search", "arguments": {"query": "test"}},
+        })
+        resp_2 = json.dumps({
+            "action_rationale": "Synthesize.",
+            "decision_summary": "Synthesize.",
+            "action_type": "SYNTHESIZE",
+            "tool_call": {"call_id": "c2", "tool_name": "academic_synthesizer", "arguments": {"query": "test"}},
+        })
+
+        provider = MockLLMProvider([resp_1, resp_2])
+        registry = ToolRegistry()
+        registry.register(MockAcademicSearchTool())
+        registry.register(WrongTypeSynthesizerTool())
+
+        planner = ReActStepPlanner(llm_provider=provider)
+        agent = AcademicAgent(tool_registry=registry, planner=planner)
+
+        trace = agent.run("Explain eigenvalues.")
+        assert trace.terminal_state == AgentTerminalState.TERMINATED_ERROR.value
+        assert trace.final_answer is None
+
+    def test_synthesis_missing_validity_defaults_false(self) -> None:
+        """Verify synthesis returning answer without is_valid_academic_answer does not default to True."""
+        class MissingValiditySynthesizerTool(MockAcademicSynthesizerTool):
+            def execute(self, arguments: dict) -> ToolResult:
+                res = super().execute(arguments)
+                out = dict(res.output)
+                out.pop("is_valid_academic_answer", None)
+                return ToolResult(
+                    call_id="call_syn",
+                    tool_name="academic_synthesizer",
+                    success=True,
+                    output=out,
+                )
+
+        resp_1 = json.dumps({
+            "action_rationale": "Search.",
+            "decision_summary": "Search.",
+            "action_type": "SEARCH",
+            "tool_call": {"call_id": "c1", "tool_name": "academic_search", "arguments": {"query": "test"}},
+        })
+        resp_2 = json.dumps({
+            "action_rationale": "Synthesize.",
+            "decision_summary": "Synthesize.",
+            "action_type": "SYNTHESIZE",
+            "tool_call": {"call_id": "c2", "tool_name": "academic_synthesizer", "arguments": {"query": "test"}},
+        })
+
+        provider = MockLLMProvider([resp_1, resp_2])
+        registry = ToolRegistry()
+        registry.register(MockAcademicSearchTool())
+        registry.register(MissingValiditySynthesizerTool())
+
+        planner = ReActStepPlanner(llm_provider=provider)
+        agent = AcademicAgent(tool_registry=registry, planner=planner)
+
+        trace = agent.run("Explain eigenvalues.")
+        # Missing validity flag must default to False -> abstention or error, NEVER success
+        assert trace.terminal_state != AgentTerminalState.TERMINATED_SUCCESS.value
+        assert trace.terminal_state in (
+            AgentTerminalState.TERMINATED_ABSTENTION.value,
+            AgentTerminalState.TERMINATED_ERROR.value,
+        )
+
+    def test_deep_trace_immutability_multilevel(self) -> None:
+        """Verify that completed traces cannot be mutated at nested levels."""
+        resp_1 = json.dumps({
+            "action_rationale": "Search.",
+            "decision_summary": "Search.",
+            "action_type": "SEARCH",
+            "tool_call": {"call_id": "c1", "tool_name": "academic_search", "arguments": {"query": "immutable test"}},
+        })
+        resp_2 = json.dumps({
+            "action_rationale": "Synthesize.",
+            "decision_summary": "Synthesize.",
+            "action_type": "SYNTHESIZE",
+            "tool_call": {"call_id": "c2", "tool_name": "academic_synthesizer", "arguments": {"query": "immutable test"}},
+        })
+
+        provider = MockLLMProvider([resp_1, resp_2])
+        registry = ToolRegistry()
+        registry.register(MockAcademicSearchTool())
+        registry.register(MockAcademicSynthesizerTool())
+
+        planner = ReActStepPlanner(llm_provider=provider)
+        agent = AcademicAgent(tool_registry=registry, planner=planner)
+
+        trace = agent.run("Explain immutability guarantees.")
+        assert trace.terminal_state == AgentTerminalState.TERMINATED_SUCCESS.value
+
+        # Level 1: Field assignment on frozen AgentTrace
+        with pytest.raises(Exception):
+            trace.terminal_state = "MUTATED"  # type: ignore
+
+        # Level 2: Nested mutation on ToolCall.arguments
+        step_0 = trace.steps[0]
+        assert step_0.tool_call is not None
+        with pytest.raises((TypeError, AttributeError)):
+            step_0.tool_call.arguments["query"] = "MUTATED_QUERY"  # type: ignore
+
+        # Level 3: Nested mutation on ToolResult.output dictionary
+        assert step_0.tool_result is not None
+        with pytest.raises((TypeError, AttributeError)):
+            step_0.tool_result.output["count"] = 999  # type: ignore
+
+        # Level 4: Nested mutation on nested candidate in output
+        candidates = step_0.tool_result.output["candidates"]
+        with pytest.raises((TypeError, AttributeError)):
+            candidates[0]["score"] = 0.0  # type: ignore

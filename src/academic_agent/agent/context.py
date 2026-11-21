@@ -43,17 +43,14 @@ class CancellationToken:
             return self._reason
 
     def cancel(self, reason: Optional[str] = None) -> None:
-        """Request cooperative cancellation."""
+        """Request cooperative cancellation.
+
+        Strictly monotonic: once cancelled, cancellation cannot be undone or reset.
+        """
         with self._lock:
             if not self._event.is_set():
                 self._reason = reason or "Run cancelled by caller."
                 self._event.set()
-
-    def reset(self) -> None:
-        """Reset the cancellation token state."""
-        with self._lock:
-            self._reason = None
-            self._event.clear()
 
 
 class AgentRunConfig(BaseModel):
