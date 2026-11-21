@@ -160,14 +160,21 @@ class TestCitationSyntaxVariants:
         assert len(diag.citations) == 2
         occ1, occ2 = diag.citations
 
-        assert occ1.evidence_id == "E1"
-        assert occ1.raw_citation == "[E1, E2]"
+        # Group span check
+        assert occ1.is_grouped is True
+        assert occ2.is_grouped is True
+        assert occ1.group_span == (occ1.start_char, occ1.end_char)
+        assert occ2.group_span == (occ2.start_char, occ2.end_char)
         assert text[occ1.start_char : occ1.end_char] == "[E1, E2]"
-
-        assert occ2.evidence_id == "E2"
-        assert occ2.raw_citation == "[E2]" or occ2.raw_citation == "[E1, E2]"
         assert text[occ2.start_char : occ2.end_char] == "[E1, E2]"
 
+        # Individual evidence reference sub_span check
+        assert occ1.sub_span is not None
+        assert text[occ1.sub_span[0] : occ1.sub_span[1]] == "E1"
+        assert occ2.sub_span is not None
+        assert text[occ2.sub_span[0] : occ2.sub_span[1]] == "E2"
+
+        # Resolution replaces group exactly once without duplication
         resolved = validator.resolve_citations(text, sample_context)
         assert resolved == "Both models are evaluated together [Lecture 4, p. 18; Lecture 5, pp. 8-9]."
 
@@ -188,6 +195,19 @@ class TestCitationSyntaxVariants:
         # Non-destructive resolution keeps invalid E99 intact
         resolved = validator.resolve_citations(text, sample_context)
         assert resolved == "The analysis combines established results [Lecture 4, p. 18; E99]."
+
+    def test_mixed_grouped_citations_resolved_exactly_once(self, sample_context):
+        """Verify each grouped citation is resolved exactly once without overlapping replacement corruption."""
+        validator = CitationValidator()
+        text = "First group [E1, E2], second group [E1, E99], third single [E2]."
+
+        resolved = validator.resolve_citations(text, sample_context)
+        expected = (
+            "First group [Lecture 4, p. 18; Lecture 5, pp. 8-9], "
+            "second group [Lecture 4, p. 18; E99], "
+            "third single [Lecture 5, pp. 8-9]."
+        )
+        assert resolved == expected
 
     def test_uncited_evidence_ids_tracked(self, sample_context):
         validator = CitationValidator()

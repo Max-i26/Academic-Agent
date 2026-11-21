@@ -8,10 +8,13 @@ from academic_agent.generation.synthesis.models import (
     GroundedEvidence,
     OmissionReason,
     OmittedCandidate,
+    PolicyOutcome,
+    PolicyValidationResult,
     ValidationDiagnostics,
 )
 from academic_agent.generation.synthesis.protocols import (
     AcademicSynthesizerProtocol,
+    AnswerPolicyValidatorProtocol,
     CitationValidatorProtocol,
     EvidenceContextBuilderProtocol,
     EvidenceFormatterProtocol,
@@ -24,12 +27,15 @@ from academic_agent.generation.synthesis.prompt.grounding_prompt_builder import 
     DEFAULT_SYSTEM_PROMPT,
     GroundingPromptBuilder,
 )
+from academic_agent.generation.synthesis.validation.answer_policy_validator import AnswerPolicyValidator
 from academic_agent.generation.synthesis.validation.citation_validator import CitationValidator
 
 __all__ = [
     "EvidenceSufficiency",
     "OmissionReason",
     "OmittedCandidate",
+    "PolicyOutcome",
+    "PolicyValidationResult",
     "GroundedEvidence",
     "EvidenceContext",
     "CitationOccurrence",
@@ -39,6 +45,7 @@ __all__ = [
     "EvidenceContextBuilderProtocol",
     "GroundingPromptBuilderProtocol",
     "CitationValidatorProtocol",
+    "AnswerPolicyValidatorProtocol",
     "EvidenceSufficiencyAssessorProtocol",
     "AcademicSynthesizerProtocol",
     "EvidenceFormatter",
@@ -46,4 +53,5 @@ __all__ = [
     "GroundingPromptBuilder",
     "DEFAULT_SYSTEM_PROMPT",
     "CitationValidator",
+    "AnswerPolicyValidator",
 ]

@@ -143,6 +143,10 @@ class CitationValidator(CitationValidatorProtocol):
                 elif not is_valid and eid not in invalid_cited_ids:
                     invalid_cited_ids.append(eid)
 
+                rel_pos = cand.raw.find(eid)
+                sub_start = cand.start + rel_pos
+                sub_end = sub_start + len(eid)
+
                 citations.append(
                     CitationOccurrence(
                         evidence_id=eid,
@@ -151,13 +155,18 @@ class CitationValidator(CitationValidatorProtocol):
                         end_char=cand.end,
                         is_valid=is_valid,
                         resolution_label=res_label,
+                        is_grouped=False,
+                        group_span=(cand.start, cand.end),
+                        sub_span=(sub_start, sub_end),
                     )
                 )
 
             # 2. Grouped valid citation IDs: [E1, E2]
             elif GROUPED_EID_PATTERN.match(inner):
-                sub_eids = [x.strip() for x in inner.split(",") if x.strip()]
-                for eid in sub_eids:
+                # Match each individual token with its position inside cand.raw
+                search_offset = 0
+                for match_id in re.finditer(r"\bE[1-9]\d*\b", cand.raw):
+                    eid = match_id.group(0)
                     is_valid = eid in context.evidence_lookup
                     res_label = context.evidence_lookup[eid].citation_label if is_valid else ""
 
@@ -165,6 +174,9 @@ class CitationValidator(CitationValidatorProtocol):
                         valid_cited_ids.append(eid)
                     elif not is_valid and eid not in invalid_cited_ids:
                         invalid_cited_ids.append(eid)
+
+                    sub_start = cand.start + match_id.start()
+                    sub_end = cand.start + match_id.end()
 
                     citations.append(
                         CitationOccurrence(
@@ -174,6 +186,9 @@ class CitationValidator(CitationValidatorProtocol):
                             end_char=cand.end,
                             is_valid=is_valid,
                             resolution_label=res_label,
+                            is_grouped=True,
+                            group_span=(cand.start, cand.end),
+                            sub_span=(sub_start, sub_end),
                         )
                     )
 

@@ -185,16 +185,31 @@ class EvidenceContext(BaseModel):
 
 
 class CitationOccurrence(BaseModel):
-    """A citation marker extracted from generated text with exact character offsets."""
+    """A citation marker extracted from generated text with exact character offsets.
+
+    Distinguishes the outer citation group span from the individual evidence reference token.
+    """
 
     evidence_id: str = Field(description="Parsed identifier without brackets (e.g. 'E1').")
-    raw_citation: str = Field(description="Raw citation substring (e.g. '[E1]').")
+    raw_citation: str = Field(description="Raw citation substring (e.g. '[E1]' or '[E1, E2]').")
     start_char: int = Field(ge=0, description="Start character offset in generated text.")
     end_char: int = Field(ge=0, description="End character offset in generated text.")
     is_valid: bool = Field(default=False, description="True if evidence_id exists in the context.")
     resolution_label: str = Field(
         default="",
         description="Resolved human-readable citation label when valid (e.g. '[Lecture 4, p. 18]').",
+    )
+    is_grouped: bool = Field(
+        default=False,
+        description="True if this occurrence represents a reference within a multi-ID group (e.g. '[E1, E2]').",
+    )
+    group_span: tuple[int, int] | None = Field(
+        default=None,
+        description="The enclosing (start, end) span of the entire bracketed citation group.",
+    )
+    sub_span: tuple[int, int] | None = Field(
+        default=None,
+        description="Exact (start, end) span of this individual evidence_id token within answer text.",
     )
 
     @model_validator(mode="after")
@@ -204,6 +219,38 @@ class CitationOccurrence(BaseModel):
                 f"end_char ({self.end_char}) must be strictly greater than start_char ({self.start_char})."
             )
         return self
+
+
+class PolicyOutcome(str, Enum):
+    """Categorical classification of generated answer compliance with academic answering policy."""
+
+    ANSWERED = "answered"
+    COMPLIANT_ABSTENTION = "compliant_abstention"
+    PARTIAL_ANSWER = "partial_answer"
+    CONTRADICTORY_REFUSAL = "contradictory_refusal"
+    UNSUPPORTED_ANSWER = "unsupported_answer"
+    INDETERMINATE = "indeterminate"
+
+
+class PolicyValidationResult(BaseModel):
+    """Evaluation result assessing answer compliance against academic answering policy."""
+
+    outcome: PolicyOutcome = Field(description="Categorical policy outcome.")
+    refusal_detected: bool = Field(default=False, description="Whether refusal language was found.")
+    refusal_phrases: list[str] = Field(default_factory=list, description="Extracted refusal substrings.")
+    has_substantive_continuation: bool = Field(
+        default=False,
+        description="Whether substantive claims followed a refusal statement.",
+    )
+    has_gap_statement: bool = Field(
+        default=False,
+        description="Whether unsupported gaps were explicitly identified in a partial answer.",
+    )
+    is_compliant: bool = Field(
+        description="True if answer complies with academic answering guidelines (ANSWERED, COMPLIANT_ABSTENTION, PARTIAL_ANSWER).",
+    )
+    explanation: str = Field(default="", description="Detailed rationale for the policy classification.")
+    warnings: list[str] = Field(default_factory=list, description="Policy anomalies or warnings.")
 
 
 class ValidationDiagnostics(BaseModel):
