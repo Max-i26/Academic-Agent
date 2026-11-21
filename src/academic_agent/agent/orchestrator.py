@@ -228,6 +228,16 @@ class AcademicAgent(AgentProtocol):
             budget_tracker=context.budget_tracker,
         )
 
+        # Immediate Post-Planner Cancellation Check:
+        # Guarantee that cancellation requested during planning/LLM reasoning aborts
+        # execution BEFORE policy authorization or tool dispatch occurs.
+        if context.check_cancellation():
+            context.transition_to(
+                AgentTerminalState.TERMINATED_CANCELLED,
+                reason=context.refusal_explanation or "Cooperative cancellation requested during planning.",
+            )
+            return
+
         # 2. Authorization phase (evaluated while in PLANNING)
         decision: PolicyDecision = self.decision_policy.evaluate(
             proposed_action=proposed_action,
@@ -278,7 +288,14 @@ class AcademicAgent(AgentProtocol):
             # Action rejected; remains in PLANNING to re-plan with updated scratchpad
             return
 
-        # Action is Authorized -> Transition to ACTION_SELECTION
+        # Action is Authorized -> Check cancellation before state transition
+        if context.check_cancellation():
+            context.transition_to(
+                AgentTerminalState.TERMINATED_CANCELLED,
+                reason=context.refusal_explanation or "Cooperative cancellation requested before action selection.",
+            )
+            return
+
         context.consecutive_rejections = 0
         action = decision.action
 
@@ -326,6 +343,13 @@ class AcademicAgent(AgentProtocol):
         step_start_time: float,
     ) -> None:
         """Execute intermediate tool calls (SEARCH, FILTER) with isolated dispatch and observation processing."""
+        if context.check_cancellation():
+            context.transition_to(
+                AgentTerminalState.TERMINATED_CANCELLED,
+                reason=context.refusal_explanation or "Cooperative cancellation requested before tool invocation.",
+            )
+            return
+
         context.transition_to(
             AgentExecutionState.TOOL_INVOCATION,
             reason=f"Dispatching tool {tool_call.tool_name}",
@@ -380,6 +404,13 @@ class AcademicAgent(AgentProtocol):
         step_start_time: float,
     ) -> None:
         """Execute grounded answer synthesis step via AcademicSynthesizerTool."""
+        if context.check_cancellation():
+            context.transition_to(
+                AgentTerminalState.TERMINATED_CANCELLED,
+                reason=context.refusal_explanation or "Cooperative cancellation requested before synthesis dispatch.",
+            )
+            return
+
         context.transition_to(
             AgentExecutionState.ANSWER_SYNTHESIS,
             reason="Invoking Phase 5 grounded synthesizer",

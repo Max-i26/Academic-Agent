@@ -277,12 +277,16 @@ class TestStreamingLifecycleAndRaceElimination:
         worker_reached_barrier = threading.Event()
         release_worker = threading.Event()
         tools_executed = threading.Event()
+        planner_invocations = []
+        dispatched_tools = []
 
         orig_plan = service.agent.planner.plan_next_step
 
         def barrier_plan(query, history, available_tools, budget_tracker=None):
+            planner_invocations.append("step_0")
             worker_reached_barrier.set()
             release_worker.wait(timeout=5.0)
+            # The planner finishes reasoning and produces a proposed SEARCH action
             return orig_plan(query, history, available_tools, budget_tracker=budget_tracker)
 
         service.agent.planner.plan_next_step = barrier_plan
@@ -290,6 +294,8 @@ class TestStreamingLifecycleAndRaceElimination:
         orig_dispatch = service.agent.dispatcher.dispatch
 
         def tracked_dispatch(*args, **kwargs):
+            tool_name = args[0].tool_name if (args and hasattr(args[0], "tool_name")) else "tool"
+            dispatched_tools.append(tool_name)
             tools_executed.set()
             return orig_dispatch(*args, **kwargs)
 
@@ -306,30 +312,39 @@ class TestStreamingLifecycleAndRaceElimination:
             assert service.is_active(run_id) is True
             token = service._active_tokens[run_id]
 
-            # 3. Hold the worker at a controlled point before agent execution
+            # 3. Hold the worker at the planning phase
             assert worker_reached_barrier.wait(timeout=3.0) is True
             assert token.is_cancelled is False
+            assert len(planner_invocations) == 1
 
-            # 4. Disconnect the consumer
+            # 4. Disconnect the consumer while the planner was in-flight
             await gen.aclose()
 
             # 5. Assert the token is cancelled by the disconnect finally block
             assert token.is_cancelled is True
 
-            # 6. Release the worker
+            # 6. Release the worker (planner finishes and returns proposed SEARCH action)
             release_worker.set()
 
-            # Give worker a moment to complete cooperative cancellation
-            await asyncio.sleep(0.1)
+            # Wait for worker thread to exit completely
+            for _ in range(50):
+                if not service.is_active(run_id):
+                    break
+                await asyncio.sleep(0.02)
 
-            # 7. Assert the agent never performs tool or LLM execution and cleanup happens exactly once
+            # 7. Assert:
+            # - Planning was in-flight when cancelled (len(planner_invocations) == 1)
+            # - ZERO tools were ever dispatched because the post-planner cancellation check aborted execution!
+            assert len(dispatched_tools) == 0
             assert tools_executed.is_set() is False
             assert service.is_active(run_id) is False
             assert run_id not in service._active_runs
             assert run_id in service._completed_runs
             completed = service.get_run(run_id)
             assert completed is not None
-            assert completed.status == ServiceRunStatus.CANCELLED or "CANCELLED" in completed.terminal_state
+            assert completed.status == ServiceRunStatus.CANCELLED
+            assert completed.terminal_state == "TERMINATED_CANCELLED"
+            assert any(term in completed.terminal_reason.lower() for term in ("cancelled", "cancellation", "disconnect"))
 
         asyncio.run(_test())
 
@@ -385,20 +400,28 @@ class TestStreamingLifecycleAndRaceElimination:
             req = QueryRequest(query="Measure pending async backlog")
             events = []
             gen = service.stream_query_async(req)
-            # Read first event then sleep to let producer saturate
+            # Read first event, then synchronously block the event loop thread
+            # to guarantee saturation occurs on the producer side!
             first = await anext(gen)
             events.append(first)
-            await asyncio.sleep(0.1)
+            time.sleep(0.08)
 
             async for ev in gen:
                 events.append(ev)
 
-            # Assert the maximum observed pending backlog on producer thread never exceeded max_async_backlog + 2
+            # Assert saturation threshold was reached, backlog remained strictly bounded,
+            # and dropped events count confirms that bounded-loss backpressure took effect.
             assert recorded_observer, "Observer should have been captured"
             obs = recorded_observer[0]
+            assert max_observed_backlog[0] >= obs.max_async_backlog, (
+                f"Saturation did not occur: observed {max_observed_backlog[0]} < {obs.max_async_backlog}"
+            )
             assert max_observed_backlog[0] <= obs.max_async_backlog + 2, (
                 f"Backlog exceeded bound: {max_observed_backlog[0]} > {obs.max_async_backlog + 2}"
             )
+            assert obs.dropped_events_count > 0, "Frames should have been dropped during saturation"
+            assert obs.dropped_events_count >= 800, f"Expected >=800 dropped frames, got {obs.dropped_events_count}"
+
             # Terminal delivery guaranteed
             assert events[-1].event_type == StreamEventType.RUN_COMPLETED
             assert events[-1].payload["status"] == ServiceRunStatus.COMPLETED.value

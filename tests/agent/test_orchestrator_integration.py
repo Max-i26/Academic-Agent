@@ -1053,3 +1053,72 @@ class TestOrchestratorAdversarialAndConcurrency:
         assert len(captured_configs) == 0
         assert action2.action_type == ActionType.ABSTAIN
         assert "insufficient token budget headroom" in (action2.refusal_reason or "").lower()
+
+    def test_cancellation_during_planning_prevents_tool_dispatch(self) -> None:
+        """Verify that cancellation requested while planner is in-flight aborts BEFORE tool dispatch."""
+        in_planning = threading.Event()
+        release_planner = threading.Event()
+        tools_executed: List[str] = []
+
+        class BarrierPlanner:
+            def plan_next_step(self, query: str, history: Any, available_tools: Any, budget_tracker: Any = None) -> ProposedAction:
+                in_planning.set()
+                release_planner.wait(timeout=5.0)
+                # When released, return a valid authorized SEARCH tool call
+                return ProposedAction(
+                    action_type=ActionType.SEARCH,
+                    action_rationale="Search condition for stationarity.",
+                    decision_summary="Dispatch search tool.",
+                    tool_call=ToolCall(
+                        call_id="call_cancel_test",
+                        tool_name="academic_search",
+                        arguments={"query": "AR(1)"},
+                    ),
+                )
+
+        class TrackedSearchTool(MockAcademicSearchTool):
+            def execute(self, arguments: Any) -> Any:
+                tools_executed.append("academic_search")
+                return super().execute(arguments)
+
+        registry = ToolRegistry()
+        registry.register(TrackedSearchTool())
+        planner = BarrierPlanner()
+        agent = AcademicAgent(tool_registry=registry, planner=planner)
+
+        token = CancellationToken()
+        run_result: List[AgentTrace] = []
+
+        def _worker():
+            trace = agent.run(
+                query="What are the conditions for AR(1) stationarity?",
+                cancellation_token=token,
+            )
+            run_result.append(trace)
+
+        worker_thread = threading.Thread(target=_worker)
+        worker_thread.start()
+
+        # 1. Wait until agent is blocked inside planning phase
+        assert in_planning.wait(timeout=3.0) is True
+        assert token.is_cancelled is False
+
+        # 2. Trigger cooperative cancellation while planner is executing
+        token.cancel(reason="Student aborted while LLM was reasoning.")
+
+        # 3. Release the planner so plan_next_step returns the SEARCH proposed action
+        release_planner.set()
+        worker_thread.join(timeout=3.0)
+
+        # 4. Verify post-planner cancellation invariant:
+        # - Trace reached TERMINATED_CANCELLED
+        # - Transition was directly from PLANNING to TERMINATED_CANCELLED
+        # - ZERO tools were ever dispatched!
+        assert len(run_result) == 1
+        trace = run_result[0]
+        assert trace.terminal_state == AgentTerminalState.TERMINATED_CANCELLED.value
+        assert len(tools_executed) == 0, f"Expected 0 tool executions, but executed: {tools_executed}"
+        assert len(trace.steps) == 0, "No steps should be recorded after post-planner cancellation"
+        assert trace.transitions[-1].to_state == AgentTerminalState.TERMINATED_CANCELLED.value
+        assert trace.transitions[-1].from_state == AgentExecutionState.PLANNING.value
+        assert "Student aborted while LLM was reasoning." in (trace.refusal_explanation or "")

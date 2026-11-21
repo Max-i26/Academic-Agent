@@ -67,6 +67,7 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
         self._step_counter = 0
         self.has_completed = False
         self._pending_async_callbacks = 0
+        self._dropped_events_count = 0
         self._backlog_lock = threading.Lock()
 
     @property
@@ -74,6 +75,12 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
         """Return the number of async callbacks currently scheduled or in-flight."""
         with self._backlog_lock:
             return self._pending_async_callbacks
+
+    @property
+    def dropped_events_count(self) -> int:
+        """Return the total number of intermediate telemetry frames dropped due to saturation."""
+        with self._backlog_lock:
+            return self._dropped_events_count
 
     def _emit(self, event: Optional[StreamEvent]) -> None:
         """Deliver event to sync queue or async queue bridge with backpressure safety."""
@@ -107,6 +114,7 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
             # if the event loop's pending callback backlog is saturated.
             with self._backlog_lock:
                 if not is_terminal and self._pending_async_callbacks >= self.max_async_backlog:
+                    self._dropped_events_count += 1
                     logger.debug(
                         "Dropping intermediate telemetry frame due to saturated async backlog (%d >= %d).",
                         self._pending_async_callbacks,
