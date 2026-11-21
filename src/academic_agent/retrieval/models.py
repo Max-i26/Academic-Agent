@@ -171,7 +171,7 @@ class Evidence(BaseModel):
             '[Lecture 7, pp. 4, 7]'
         """
         # Extract lecture number if present, otherwise use source_file basename
-        match = re.search(r"Lecture\s*(\d+)", self.source_file, re.IGNORECASE)
+        match = re.search(r"Lecture[\s_]*(\d+)", self.source_file, re.IGNORECASE)
         if match:
             doc_label = f"Lecture {match.group(1)}"
         else:
