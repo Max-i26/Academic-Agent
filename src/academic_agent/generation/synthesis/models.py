@@ -42,6 +42,11 @@ class OmittedCandidate(BaseModel):
     details: str = Field(default="", description="Detailed explanation or threshold metrics for omission.")
     rank: int = Field(ge=1, description="Original retrieval rank (1-based).")
 
+    @property
+    def omission_reason(self) -> OmissionReason:
+        """Alias for reason conforming to audit interface."""
+        return self.reason
+
 
 class GroundedEvidence(BaseModel):
     """An individual retrieved evidence item with application-assigned ID and verified provenance."""
@@ -162,6 +167,16 @@ class EvidenceContext(BaseModel):
                 raise ValueError(f"Duplicate evidence_id '{item.evidence_id}' found in EvidenceContext items.")
             seen_ids.add(item.evidence_id)
         return self
+
+    @property
+    def count(self) -> int:
+        """Count of canonical evidence items assembled in this context."""
+        return len(self.items)
+
+    @property
+    def evidence_ids(self) -> list[str]:
+        """Ordered list of valid evidence IDs present in this context."""
+        return [item.evidence_id for item in self.items]
 
     @property
     def has_omissions(self) -> bool:
@@ -315,9 +330,23 @@ class AcademicAnswer(BaseModel):
         default=EvidenceSufficiency.UNKNOWN,
         description="Assessed sufficiency classification.",
     )
+    policy_result: PolicyValidationResult | None = Field(
+        default=None,
+        description="Assessed answering policy compliance result.",
+    )
     raw_response: LLMResponse = Field(description="Underlying raw response from the LLM provider.")
     model_name: str = Field(description="Model identifier that produced this completion.")
     latency_ms: float = Field(ge=0.0, description="Total end-to-end synthesis latency in milliseconds.")
+
+    @property
+    def policy_outcome(self) -> PolicyOutcome | None:
+        """Categorical policy outcome, if policy validation was executed."""
+        return self.policy_result.outcome if self.policy_result else None
+
+    @property
+    def is_policy_compliant(self) -> bool:
+        """True if policy validation passed and answer complies with academic answering policy."""
+        return self.policy_result.is_compliant if self.policy_result else False
 
     @property
     def has_valid_citation_integrity(self) -> bool:
@@ -330,6 +359,8 @@ class AcademicAnswer(BaseModel):
     @property
     def refusal_detected(self) -> bool:
         """True if the LLM output contained an explicit refusal/abstention phrase."""
+        if self.policy_result is not None:
+            return self.policy_result.refusal_detected
         return self.validation.refusal_detected
 
     @property

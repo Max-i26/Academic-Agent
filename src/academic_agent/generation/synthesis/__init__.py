@@ -29,6 +29,7 @@ from academic_agent.generation.synthesis.prompt.grounding_prompt_builder import 
 )
 from academic_agent.generation.synthesis.validation.answer_policy_validator import AnswerPolicyValidator
 from academic_agent.generation.synthesis.validation.citation_validator import CitationValidator
+from academic_agent.generation.synthesis.synthesizer import AcademicSynthesizer
 
 __all__ = [
     "EvidenceSufficiency",
@@ -54,4 +55,5 @@ __all__ = [
     "DEFAULT_SYSTEM_PROMPT",
     "CitationValidator",
     "AnswerPolicyValidator",
+    "AcademicSynthesizer",
 ]

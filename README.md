@@ -33,20 +33,23 @@ The system is designed with modular components:
 
 ## Development Status
 
-✅ **Phase 1 & Phase 2 Complete**
+✅ **Phase 1, Phase 2, Phase 3, Phase 4 & Phase 5 (Stage 5.1 & 5.2) Complete**
 - PDF Text Ingestion (`PDFExtractor` & `PageRecord`)
 - Layout & Table Extraction (`LayoutExtractor` & `PageLayoutRecord`)
 - Text Cleaning (`TextCleaner`) & Line Reconstruction (`TextSegmenter`)
-- **Structure-Aware Chunking Engine** (`ChunkingEngine`):
-  - **Stage A — Document Normalization**: Ingests `PageRecord` and `PageLayoutRecord`, preserving bounding boxes and typography into standard `ContentUnit`s.
-  - **Stage B — Structural Parsing**: Layout-driven slide title detection, prose transition filtering (`Therefore:`, `However:`), running header/footer rejection, and identification of formulas, lists, tables, and paragraphs.
-  - **Stage C — Semantic Grouping**: Preserves slide-level derivation steps, binding headings with introductory explanations and equations with definitions.
-  - **Stage D — Size Controller**: Structure-aware recursive splitting with word/token budgets and oversized table row splitting with repeated headers.
-  - **Stage E — Overlap Manager**: Sentence-bounded, section-constrained contextual overlap bounded by remaining token headroom.
-  - **Stage F — Provenance Tracking**: Multi-page tracking, source-unit references, and deterministic SHA-256 chunk IDs.
-  - **Stage G — Output Validation**: Rigorous integrity validation against token and word limits (`ValidationReport`).
-- **116 automated tests passing** across unit, boundary, and integration suites.
-- **Real-world evaluation verified** on all 7 DS5104 Time Series lectures (237 pages, 234 chunks generated, 0 exceeding 220 tokens, 0 forced splits).
+- **Structure-Aware Chunking Engine** (`ChunkingEngine`)
+- **Phase 3 Storage & Hybrid Retrieval** (Dense, Sparse BM25, Reciprocal Rank Fusion, Cross-Encoder Reranking)
+- **Phase 5.1 Model Generation Layer** (`LLMProviderProtocol`, `MockLLMProvider`, `HuggingFaceTransformersProvider`, `OllamaProvider`)
+- **Phase 5.2 Academic Evidence Grounding & Synthesis**:
+  - `EvidenceContextBuilder`: Token budgeting, provenance deduplication, sequence-aware 5-gram overlap detection.
+  - `GroundingPromptBuilder`: System/user role isolation, untrusted XML evidence wrapping, anti-hallucination citation prompts.
+  - `CitationValidator`: Occurrence-level tracking, code masking, grouped citation resolution (`group_span` / `sub_span`).
+  - `AnswerPolicyValidator`: 6 policy outcomes (`ANSWERED`, `COMPLIANT_ABSTENTION`, `PARTIAL_ANSWER`, `CONTRADICTORY_REFUSAL`, `UNSUPPORTED_ANSWER`, `INDETERMINATE`).
+  - `AcademicSynthesizer`: End-to-end grounded synthesis orchestrator.
+- **471 automated tests passing** across unit, boundary, and end-to-end integration suites with zero warnings.
+
+### Architectural Boundary: Citation Integrity vs. Semantic Claim Grounding
+> **Note on Verification Scope:** Deterministic validation in Academic-Agent verifies citation identity, provenance mapping, and observable answering-policy compliance (refusal language, contradictory continuations, explicit gap statements). It does not claim full claim-level semantic fact verification. An LLM claim citing a valid ID `[E1]` has verified citation integrity and behavioral policy compliance, but verifying that the specific semantic claim is factually entailed by the evidence passage remains an independent downstream research capability.
 
 ## Installation
 

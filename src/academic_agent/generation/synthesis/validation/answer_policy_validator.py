@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 # Refusal statements asserting insufficiency of evidence
 REFUSAL_PATTERNS = [
-    re.compile(r"\b(?:do|does|did)\s+not\s+(?:contain|provide|have|include)\s+(?:enough|sufficient|any)\s+(?:evidence|information|details)\b", re.IGNORECASE),
+    re.compile(r"\b(?:do|does|did)\s+not\s+(?:contain|provide|have|include)\s+(?:(?:enough|sufficient|any)\s+)?(?:evidence|information|details)\b", re.IGNORECASE),
     re.compile(r"\b(?:cannot|can\s+not|could\s+not)\s+(?:reliably\s+)?(?:find|determine|establish|ascertain|answer|verify|say)\b", re.IGNORECASE),
     re.compile(r"\binsufficient\s+(?:evidence|information|materials?|data|reference|context)\b", re.IGNORECASE),
     re.compile(r"\bnot\s+enough\s+(?:evidence|information|materials?|data|context)\b", re.IGNORECASE),
@@ -38,10 +38,10 @@ NON_REFUSAL_CONTEXTS = [
 
 # Explicit gap statements for partial answers
 GAP_PATTERNS = [
-    re.compile(r"\bhowever,\s*(?:the\s+)?(?:provided|retrieved)?\s*(?:material|evidence|lecture|notes?)\s+does\s+not\s+(?:establish|specify|state|mention|contain|provide)\b", re.IGNORECASE),
-    re.compile(r"\bthe\s+(?:provided\s+)?(?:evidence|material|lecture)\s+does\s+not\s+(?:establish|specify|state|mention|contain|provide)\b", re.IGNORECASE),
-    re.compile(r"\bcannot\s+be\s+determined\s+from\s+the\s+(?:provided|available)?\s*(?:evidence|material|lecture)\b", re.IGNORECASE),
-    re.compile(r"\bdoes\s+not\s+establish\s+the\s+(?:appropriate\s+)?(?:model\s+order|order|parameter|value)\b", re.IGNORECASE),
+    re.compile(r"\bhowever,\s*(?:the\s+)?(?:provided|retrieved)?\s*(?:lecture\s+)?(?:materials?|evidence|notes?)\s+(?:do|does)\s+not\s+(?:establish|specify|state|mention|contain|provide)\b", re.IGNORECASE),
+    re.compile(r"\bthe\s+(?:provided\s+)?(?:lecture\s+)?(?:evidence|materials?|notes?)\s+(?:do|does)\s+not\s+(?:establish|specify|state|mention|contain|provide)\b", re.IGNORECASE),
+    re.compile(r"\bcannot\s+be\s+determined\s+from\s+the\s+(?:provided|available)?\s*(?:evidence|materials?|lectures?)\b", re.IGNORECASE),
+    re.compile(r"\b(?:does|do)\s+not\s+establish\s+the\s+(?:appropriate\s+)?(?:model\s+order|order|parameter|value)\b", re.IGNORECASE),
     re.compile(r"\bthe\s+evidence\s+does\s+not\s+mention\b", re.IGNORECASE),
     re.compile(r"\bdoes\s+not\s+mention\s+whether\b", re.IGNORECASE),
     re.compile(r"\bno\s+details\s+are\s+provided\s+(?:about|regarding|for)\b", re.IGNORECASE),
@@ -243,6 +243,21 @@ class AnswerPolicyValidator(AnswerPolicyValidatorProtocol):
 
         # Case C: Clean refusal detected without substantive continuation
         if refusal_detected and not has_substantive_continuation:
+            if (
+                sufficiency == EvidenceSufficiency.PARTIALLY_SUFFICIENT
+                and len(diagnostics.valid_cited_ids) > 0
+                and len(diagnostics.invalid_cited_ids) == 0
+            ):
+                return PolicyValidationResult(
+                    outcome=PolicyOutcome.PARTIAL_ANSWER,
+                    refusal_detected=True,
+                    refusal_phrases=refusal_phrases,
+                    has_substantive_continuation=False,
+                    has_gap_statement=True,
+                    is_compliant=True,
+                    explanation="Partial answer: supported portions are grounded with citations, and unsupported gaps are explicitly identified.",
+                    warnings=warnings,
+                )
             if sufficiency == EvidenceSufficiency.SUFFICIENT:
                 warnings.append("Model refused to answer despite evidence being assessed as sufficient.")
             return PolicyValidationResult(
