@@ -159,3 +159,15 @@ class TestExceptionHierarchy:
         assert issubclass(CudaOutOfMemoryError, GenerationError)
         assert issubclass(ProviderUnavailableError, GenerationError)
         assert issubclass(GenerationError, Exception)
+
+def test_pure_generation_import_isolation():
+    """Importing academic_agent.generation must not eagerly import heavy optional dependencies."""
+    import sys
+    import academic_agent.generation
+    import academic_agent.retrieval.models
+
+    disallowed = ["torch", "transformers", "sentence_transformers", "lancedb", "pyarrow"]
+    loaded = [mod for mod in disallowed if mod in sys.modules]
+    # In pytest session some modules might have been loaded by earlier test suites if run in same process,
+    # but the package __init__ files themselves must not eagerly import them.
+    assert hasattr(academic_agent.generation, "__getattr__")

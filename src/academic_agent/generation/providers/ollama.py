@@ -123,16 +123,33 @@ class OllamaProvider(BaseLLMProvider):
         formatted_messages = [{"role": msg.role.value, "content": msg.content} for msg in messages]
 
         total_prompt_chars = sum(len(m.content) for m in messages)
-        est_min_prompt_tokens = max(1, int(total_prompt_chars / 3.0))
-        if est_min_prompt_tokens > self._context_window:
+        total_prompt_words = sum(len(m.content.split()) for m in messages)
+        # Conservative token estimation upper bound for academic text, LaTeX equations, and XML demarcation
+        est_prompt_tokens = max(1, max(int(total_prompt_chars / 2.5), int(total_prompt_words * 1.5)) + len(messages) * 4)
+
+        if est_prompt_tokens >= self._context_window:
             raise ContextLengthExceededError(
-                f"Estimated prompt tokens ({est_min_prompt_tokens}) exceed Ollama context window ({self._context_window})."
+                f"Estimated prompt tokens ({est_prompt_tokens}) reach or exceed Ollama context window ({self._context_window})."
+            )
+
+        budget_remaining = self._context_window - est_prompt_tokens
+        if budget_remaining < 1:
+            raise ContextLengthExceededError(
+                f"No remaining context budget for completion (prompt ~{est_prompt_tokens}, context={self._context_window})."
+            )
+
+        actual_max_new_tokens = min(config.max_new_tokens, budget_remaining)
+        completion_clipped = actual_max_new_tokens < config.max_new_tokens
+        if completion_clipped:
+            logger.warning(
+                f"Requested max_new_tokens ({config.max_new_tokens}) clipped to {actual_max_new_tokens} "
+                f"due to remaining context budget ({budget_remaining})."
             )
 
         options: dict[str, Any] = {
             "temperature": config.temperature,
             "top_p": config.top_p,
-            "num_predict": config.max_new_tokens,
+            "num_predict": actual_max_new_tokens,
             "num_ctx": self._context_window,
         }
         if config.stop_sequences:
@@ -197,5 +214,7 @@ class OllamaProvider(BaseLLMProvider):
                 "backend": "ollama",
                 "done_reason": done_reason,
                 "eval_duration_ms": round(data.get("eval_duration", 0) / 1_000_000.0, 2),
+                "completion_budget_clipped": completion_clipped,
+                "estimated_prompt_tokens": est_prompt_tokens,
             },
         )

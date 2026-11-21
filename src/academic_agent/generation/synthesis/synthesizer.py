@@ -160,21 +160,20 @@ class AcademicSynthesizer:
         else:
             assessed_sufficiency = EvidenceSufficiency.UNKNOWN
 
-        # 5. Build chat messages (propagates ContextLengthExceededError if ceiling exceeded)
+        # 5. Build chat messages passing per-call ceiling without mutating shared builder state
         max_prompt_budget = max(0, provider_ctx - max_gen_tokens)
-        prev_max_prompt_tokens = getattr(self.prompt_builder, "max_prompt_tokens", None)
         try:
-            if hasattr(self.prompt_builder, "max_prompt_tokens"):
-                if prev_max_prompt_tokens is None or prev_max_prompt_tokens > max_prompt_budget:
-                    self.prompt_builder.max_prompt_tokens = max_prompt_budget
-
+            messages = self.prompt_builder.build_messages(
+                query=query,
+                context=evidence_context,
+                max_prompt_tokens=max_prompt_budget,
+            )
+        except TypeError:
+            # Fallback for custom prompt_builder protocols lacking max_prompt_tokens argument
             messages = self.prompt_builder.build_messages(
                 query=query,
                 context=evidence_context,
             )
-        finally:
-            if hasattr(self.prompt_builder, "max_prompt_tokens"):
-                self.prompt_builder.max_prompt_tokens = prev_max_prompt_tokens
 
         # 6. Generate LLM completion (propagates provider exceptions directly)
         raw_response = self.llm_provider.generate(

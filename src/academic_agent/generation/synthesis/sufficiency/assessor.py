@@ -89,7 +89,7 @@ class DeterministicSufficiencyAssessor(EvidenceSufficiencyAssessorProtocol):
         if len(clause_concepts) >= 2:
             clause_coverage = []
             for concepts in clause_concepts:
-                hits = sum(1 for c in concepts if c in evidence_text)
+                hits = sum(1 for c in concepts if bool(re.search(r"\b" + re.escape(c) + r"\b", evidence_text)))
                 ratio = hits / len(concepts) if concepts else 0.0
                 clause_coverage.append(ratio)
 
@@ -110,7 +110,7 @@ class DeterministicSufficiencyAssessor(EvidenceSufficiencyAssessorProtocol):
         if not query_concepts:
             return EvidenceSufficiency.UNKNOWN
 
-        hits = sum(1 for c in query_concepts if c in evidence_text)
+        hits = sum(1 for c in query_concepts if bool(re.search(r"\b" + re.escape(c) + r"\b", evidence_text)))
         overall_ratio = hits / len(query_concepts)
 
         if overall_ratio >= self.min_coverage_ratio:

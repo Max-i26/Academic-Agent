@@ -58,6 +58,7 @@ class GroundingPromptBuilderProtocol(Protocol):
         self,
         query: str,
         context: EvidenceContext,
+        max_prompt_tokens: int | None = None,
     ) -> list[ChatMessage]:
         """Construct grounded chat messages separating instructions from untrusted evidence.
 

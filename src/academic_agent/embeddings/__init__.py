@@ -1,32 +1,48 @@
 """Academic-Agent Embedding Subsystem (Phase 3)."""
 
-from academic_agent.embeddings.protocols import EmbeddingProvider
+from typing import Any
+
 from academic_agent.embeddings.config import (
-    EmbeddingConfig,
     DeviceType,
+    EmbeddingConfig,
     KnownEmbeddingModel,
 )
 from academic_agent.embeddings.models import (
-    EmbeddingMetadata,
-    DocumentEmbeddingRecord,
-    QueryEmbeddingRecord,
     BatchEmbeddingResult,
+    DocumentEmbeddingRecord,
+    EmbeddingMetadata,
+    QueryEmbeddingRecord,
 )
-from academic_agent.embeddings.validator import (
-    EmbeddingValidator,
-    EmbeddingError,
-    TokenLimitExceededError,
-    DimensionMismatchError,
-    InvalidEmbeddingValueError,
-)
+from academic_agent.embeddings.protocols import EmbeddingProvider
 from academic_agent.embeddings.tokenizer import (
     TokenCounter,
-    HuggingFaceTokenCounter,
     WhitespaceTokenCounter,
 )
-from academic_agent.embeddings.providers.minilm import MiniLMProvider
-from academic_agent.embeddings.providers.bge import BGEProvider
-from academic_agent.embeddings.engine import EmbeddingEngine
+from academic_agent.embeddings.validator import (
+    DimensionMismatchError,
+    EmbeddingError,
+    EmbeddingValidator,
+    InvalidEmbeddingValueError,
+    TokenLimitExceededError,
+)
+
+
+def __getattr__(name: str) -> Any:
+    """PEP 562 lazy import of heavyweight or hardware-dependent embedding providers."""
+    if name == "MiniLMProvider":
+        from academic_agent.embeddings.providers.minilm import MiniLMProvider
+        return MiniLMProvider
+    if name == "BGEProvider":
+        from academic_agent.embeddings.providers.bge import BGEProvider
+        return BGEProvider
+    if name == "EmbeddingEngine":
+        from academic_agent.embeddings.engine import EmbeddingEngine
+        return EmbeddingEngine
+    if name == "HuggingFaceTokenCounter":
+        from academic_agent.embeddings.tokenizer import HuggingFaceTokenCounter
+        return HuggingFaceTokenCounter
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
 
 __all__ = [
     "EmbeddingEngine",

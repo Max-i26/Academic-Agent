@@ -96,3 +96,28 @@ class TestDeterministicSufficiencyAssessor:
         query = "what is it and how do you do it?"
         result = assessor.assess(query, sample_stationarity_evidence)
         assert result == EvidenceSufficiency.UNKNOWN
+
+    def test_substring_word_boundary_prevents_false_positive(self):
+        """Assessor must not match concept 'ar' inside unrelated words like 'particular' or 'linear'."""
+        ev = Evidence(
+            record_id="rec_unrelated#0",
+            chunk_id="c_unrelated",
+            text="In this particular section, we consider a linear function of time.",
+            source_file="Lecture_3.pdf",
+            source_pages=[5],
+            score=0.85,
+        )
+        ctx = EvidenceContext(items=[
+            GroundedEvidence(
+                evidence_id="E1",
+                evidence=ev,
+                citation_label=ev.format_citation(),
+                token_count=20,
+            )
+        ])
+
+        assessor = DeterministicSufficiencyAssessor()
+        # Query concept 'ar' (e.g. from AR model) should NOT match 'particular' or 'linear'
+        query = "Explain AR process properties."
+        result = assessor.assess(query, ctx)
+        assert result == EvidenceSufficiency.INSUFFICIENT

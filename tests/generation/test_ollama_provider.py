@@ -160,3 +160,37 @@ class TestOllamaProvider:
             huge_messages = [ChatMessage(role=MessageRole.USER, content="A" * 1000)]
             with pytest.raises(ContextLengthExceededError, match="Estimated prompt tokens"):
                 provider.generate(huge_messages)
+
+    def test_generate_clips_completion_budget_when_near_context_limit(self):
+        """OllamaProvider clips num_predict and sets completion_budget_clipped when near context window."""
+        # Context window 500, prompt words ~250 -> est_prompt_tokens ~380. Remaining budget ~120.
+        provider = OllamaProvider(model_name="qwen2.5:1.5b", context_window=500)
+        mock_response = {
+            "model": "qwen2.5:1.5b",
+            "message": {"role": "assistant", "content": "Clipped answer"},
+            "done": True,
+            "done_reason": "length",
+            "total_duration": 100_000_000,
+            "prompt_eval_count": 350,
+            "eval_count": 100,
+        }
+
+        captured_requests = []
+        def fake_urlopen(req, timeout=None):
+            captured_requests.append(req)
+            return make_mock_http_response(200, mock_response)
+
+        with patch.object(OllamaProvider, "is_available", True):
+            with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+                # ~150 words -> approx 225-250 tokens
+                prompt_text = "word " * 150
+                messages = [ChatMessage(role=MessageRole.USER, content=prompt_text)]
+                # Request 300 completion tokens, which cannot fit in remaining context (500 - ~230 = 270)
+                config = LLMConfig(max_new_tokens=300)
+                resp = provider.generate(messages, config=config)
+
+        assert len(captured_requests) == 1
+        body = json.loads(captured_requests[0].data.decode("utf-8"))
+        actual_num_predict = body["options"]["num_predict"]
+        assert actual_num_predict < 300
+        assert resp.metadata["completion_budget_clipped"] is True

@@ -578,3 +578,33 @@ class TestQualityChecksAndRobustness:
 
         assert answer.evidence_sufficiency == EvidenceSufficiency.SUFFICIENT
         assert answer.policy_outcome == PolicyOutcome.ANSWERED
+
+    def test_concurrent_synthesis_request_isolation(self, sample_retrieval_response):
+        """Concurrent synthesis calls on a shared synthesizer instance must not cross-contaminate state."""
+        import concurrent.futures
+
+        mock_provider = MockLLMProvider(
+            default_response="Weak stationarity has constant mean [E1].",
+            simulate_latency_ms=20.0,
+        )
+        synthesizer = AcademicSynthesizer(llm_provider=mock_provider)
+
+        def run_query(idx: int):
+            # Alternate max_new_tokens to test concurrent prompt ceiling calculation
+            cfg = LLMConfig(max_new_tokens=100 if idx % 2 == 0 else 250)
+            return synthesizer.synthesize(
+                query=f"Question {idx}: Explain weak stationarity",
+                retrieval_response=sample_retrieval_response,
+                config=cfg,
+                sufficiency=EvidenceSufficiency.SUFFICIENT,
+            )
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [executor.submit(run_query, i) for i in range(10)]
+            results = [f.result() for f in futures]
+
+        assert len(results) == 10
+        for idx, ans in enumerate(results):
+            assert ans.policy_outcome == PolicyOutcome.ANSWERED
+            assert ans.evidence_context.count > 0
+            assert f"Question {idx}" in ans.query

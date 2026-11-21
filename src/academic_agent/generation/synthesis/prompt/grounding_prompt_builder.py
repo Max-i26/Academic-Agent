@@ -112,12 +112,15 @@ class GroundingPromptBuilder(GroundingPromptBuilderProtocol):
         self,
         query: str,
         context: EvidenceContext,
+        max_prompt_tokens: int | None = None,
     ) -> list[ChatMessage]:
         """Construct grounded chat messages separating instructions from untrusted evidence.
 
         Args:
             query: The academic question asked by the user.
             context: Budgeted evidence context to inject into prompt.
+            max_prompt_tokens: Optional per-call override for prompt token ceiling. If None,
+                falls back to instance ceiling self.max_prompt_tokens.
 
         Returns:
             List of ChatMessage objects formatted for LLM consumption.
@@ -147,12 +150,18 @@ class GroundingPromptBuilder(GroundingPromptBuilderProtocol):
 
         messages = [system_msg, user_msg]
 
-        if self.max_prompt_tokens is not None:
+        if max_prompt_tokens is not None and self.max_prompt_tokens is not None:
+            effective_max = min(max_prompt_tokens, self.max_prompt_tokens)
+        elif max_prompt_tokens is not None:
+            effective_max = max_prompt_tokens
+        else:
+            effective_max = self.max_prompt_tokens
+        if effective_max is not None:
             estimated_tokens, _ = self.estimate_messages_tokens(messages)
-            if estimated_tokens > self.max_prompt_tokens:
+            if estimated_tokens > effective_max:
                 raise ContextLengthExceededError(
                     f"Constructed prompt estimated at {estimated_tokens} tokens, exceeding maximum "
-                    f"allowed prompt ceiling of {self.max_prompt_tokens} tokens."
+                    f"allowed prompt ceiling of {effective_max} tokens."
                 )
 
         return messages
