@@ -11,6 +11,7 @@ from academic_agent.storage.providers.lancedb.filters import (
     build_lance_filter,
     ALLOWED_FILTER_FIELDS,
 )
+from academic_agent.storage.providers.lancedb.persistence import LancePersistenceManager
 
 __all__ = [
     "create_lance_schema",
@@ -20,4 +21,5 @@ __all__ = [
     "records_to_arrow_table",
     "build_lance_filter",
     "ALLOWED_FILTER_FIELDS",
+    "LancePersistenceManager",
 ]
