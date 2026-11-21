@@ -19,6 +19,18 @@ class TestAgentStateMachine:
         assert fsm.is_terminal is False
         assert len(fsm.history) == 1
         assert fsm.history[0].to_state == "INITIALIZED"
+        assert isinstance(fsm.history, tuple)
+
+    def test_initial_state_validation_rejects_terminal_or_invalid(self):
+        """Constructor strictly rejects terminal or unrecognized initial states."""
+        with pytest.raises(InvalidStateTransitionError, match="Invalid initial state"):
+            AgentStateMachine(initial_state=AgentTerminalState.TERMINATED_SUCCESS)
+
+        with pytest.raises(InvalidStateTransitionError, match="Invalid initial state"):
+            AgentStateMachine(initial_state=AgentTerminalState.TERMINATED_ERROR)
+
+        with pytest.raises(InvalidStateTransitionError, match="Invalid initial state"):
+            AgentStateMachine(initial_state="UNKNOWN_STATE")
 
     def test_valid_full_lifecycle_transitions(self):
         """Standard lifecycle transitions execute cleanly and update history."""

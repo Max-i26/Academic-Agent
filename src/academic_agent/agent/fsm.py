@@ -1,6 +1,6 @@
 """Finite State Machine engine with strict transition enforcement."""
 
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from datetime import datetime, timezone
 
 from academic_agent.agent.models import (
@@ -17,14 +17,26 @@ class AgentStateMachine:
     """Deterministic finite state machine governing the agent execution lifecycle.
 
     Guarantees:
+    - Initialization is strictly validated: constructor rejects terminal or unknown states.
     - Every state transition is validated against VALID_STATE_TRANSITIONS.
     - Terminal states are strictly closed (cannot transition to any other state).
     - Every transition produces an immutable StateTransitionRecord with timestamp and reason.
+    - History log returns an immutable tuple of records.
     """
 
     def __init__(self, initial_state: AgentState = AgentExecutionState.INITIALIZED) -> None:
-        self._current_state: AgentState = initial_state
+        # Validate that initial state is a recognized non-terminal execution state
+        allowed_initial = {s.value if hasattr(s, "value") else str(s) for s in AgentExecutionState}
         init_val = initial_state.value if hasattr(initial_state, "value") else str(initial_state)
+
+        if init_val not in allowed_initial:
+            raise InvalidStateTransitionError(
+                "START",
+                initial_state,
+                f"Invalid initial state '{initial_state}'. State machine must initialize in an active execution state: {sorted(list(allowed_initial))}",
+            )
+
+        self._current_state: AgentState = initial_state
         self._history: List[StateTransitionRecord] = [
             StateTransitionRecord(
                 from_state="START",
@@ -47,9 +59,9 @@ class AgentStateMachine:
         }
 
     @property
-    def history(self) -> List[StateTransitionRecord]:
-        """Ordered audit log of all state transitions."""
-        return list(self._history)
+    def history(self) -> Tuple[StateTransitionRecord, ...]:
+        """Ordered, immutable audit log of all state transitions."""
+        return tuple(self._history)
 
     def transition_to(self, target_state: AgentState, reason: Optional[str] = None) -> StateTransitionRecord:
         """Attempt to transition the state machine to target_state.
@@ -74,7 +86,6 @@ class AgentStateMachine:
 
         # 2. Transition matrix check
         allowed_targets = VALID_STATE_TRANSITIONS.get(self._current_state, set())
-        # Support both enum instance and string value comparison
         allowed_target_values = {
             s.value if hasattr(s, "value") else str(s) for s in allowed_targets
         }

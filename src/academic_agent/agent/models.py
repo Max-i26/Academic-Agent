@@ -2,8 +2,8 @@
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Union
-from pydantic import BaseModel, Field, field_validator
+from typing import Any, Dict, Optional, Set, Tuple, Union
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from academic_agent.generation.synthesis.models import AcademicAnswer
 
@@ -107,22 +107,25 @@ class ToolErrorCategory(str, Enum):
 class ToolSideEffectPolicy(BaseModel):
     """Safety and side-effect policy metadata governing a tool."""
 
+    model_config = ConfigDict(frozen=True)
+
     read_only: bool = Field(default=True, description="Whether tool makes no modifications to persistent state.")
     idempotent: bool = Field(default=True, description="Whether repeated identical invocations produce identical results.")
     mutating: bool = Field(default=False, description="Whether tool alters persistent state or external resources.")
     requires_confirmation: bool = Field(default=False, description="Whether user confirmation is required prior to execution.")
-    timeout_seconds: float = Field(default=15.0, ge=0.1, description="Hard timeout ceiling for tool execution.")
+    timeout_seconds: float = Field(default=15.0, ge=0.01, description="Hard timeout ceiling for tool execution.")
 
-    @field_validator("mutating")
-    @classmethod
-    def validate_mutation_conflict(cls, v: bool, info) -> bool:
-        if v and info.data.get("read_only", True):
+    @model_validator(mode="after")
+    def validate_mutation_conflict(self) -> "ToolSideEffectPolicy":
+        if self.mutating and self.read_only:
             raise ValueError("Tool cannot be both read_only and mutating.")
-        return v
+        return self
 
 
 class ToolCall(BaseModel):
     """Structured tool invocation request proposed by planner or authorized by engine."""
+
+    model_config = ConfigDict(frozen=True)
 
     call_id: str = Field(description="Unique call identifier for correlation.")
     tool_name: str = Field(description="Registered tool name.")
@@ -132,35 +135,66 @@ class ToolCall(BaseModel):
 class ToolResult(BaseModel):
     """Structured outcome of a tool execution with error isolation."""
 
+    model_config = ConfigDict(frozen=True)
+
     call_id: str = Field(description="Call identifier correlating with ToolCall.")
     tool_name: str = Field(description="Name of executed tool.")
     success: bool = Field(description="True if tool executed successfully.")
     output: Any = Field(default=None, description="Tool return payload or observation data.")
     error_message: Optional[str] = Field(default=None, description="Human-readable error explanation if failed.")
+    error: Optional[str] = Field(default=None, description="Alias for error_message.")
     error_category: Optional[ToolErrorCategory] = Field(default=None, description="Categorized failure classification.")
     latency_ms: float = Field(default=0.0, ge=0.0, description="Measured execution duration in milliseconds.")
+
+    @model_validator(mode="before")
+    @classmethod
+    def resolve_error_alias(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "error" in data and ("error_message" not in data or not data["error_message"]):
+                data["error_message"] = data["error"]
+            elif "error_message" in data and ("error" not in data or not data["error"]):
+                data["error"] = data["error_message"]
+        return data
 
 
 class TokenAccounting(BaseModel):
     """Cumulative token consumption metrics distinguishing exact provider counts from estimates."""
+
+    model_config = ConfigDict(frozen=True)
 
     prompt_tokens: int = Field(default=0, ge=0, description="Input prompt tokens consumed.")
     completion_tokens: int = Field(default=0, ge=0, description="Output tokens generated.")
     total_tokens: int = Field(default=0, ge=0, description="Sum of prompt and completion tokens.")
     is_exact: bool = Field(default=True, description="True if reported directly by provider; False if estimated.")
 
-    def add(self, prompt: int, completion: int, is_exact: bool = True) -> "TokenAccounting":
+    @model_validator(mode="after")
+    def validate_token_sum(self) -> "TokenAccounting":
+        if self.total_tokens != (self.prompt_tokens + self.completion_tokens):
+            raise ValueError(
+                f"total_tokens ({self.total_tokens}) must equal prompt_tokens ({self.prompt_tokens}) + "
+                f"completion_tokens ({self.completion_tokens})"
+            )
+        return self
+
+    def add(self, prompt: int = 0, completion: int = 0, is_exact: Optional[bool] = None) -> "TokenAccounting":
         """Return a new TokenAccounting instance accumulating usage."""
+        if prompt < 0 or completion < 0:
+            raise ValueError(f"Token increments must be non-negative (got prompt={prompt}, completion={completion})")
+        new_p = self.prompt_tokens + prompt
+        new_c = self.completion_tokens + completion
+        new_exact = self.is_exact if is_exact is None else (self.is_exact and is_exact)
         return TokenAccounting(
-            prompt_tokens=self.prompt_tokens + prompt,
-            completion_tokens=self.completion_tokens + completion,
-            total_tokens=self.total_tokens + prompt + completion,
-            is_exact=self.is_exact and is_exact,
+            prompt_tokens=new_p,
+            completion_tokens=new_c,
+            total_tokens=new_p + new_c,
+            is_exact=new_exact,
         )
 
 
 class StateTransitionRecord(BaseModel):
     """Immutable record of an agent state machine transition."""
+
+    model_config = ConfigDict(frozen=True)
 
     from_state: str = Field(description="Pre-transition state.")
     to_state: str = Field(description="Post-transition state.")
@@ -174,19 +208,39 @@ class StateTransitionRecord(BaseModel):
 class ProposedAction(BaseModel):
     """Next action proposed by the LLM step planner before engine authorization."""
 
-    thought: str = Field(description="Explicit reasoning rationale for this step.")
+    model_config = ConfigDict(frozen=True)
+
+    action_rationale: str = Field(default="", description="Concise rationale explaining why this action was selected.")
     action_type: str = Field(description="Action category: 'tool_call', 'direct_answer', or 'refusal'.")
+    decision_summary: Optional[str] = Field(default=None, description="High-level summary of the decision.")
     tool_call: Optional[ToolCall] = Field(default=None, description="Proposed tool invocation if action_type is 'tool_call'.")
     direct_answer: Optional[str] = Field(default=None, description="Draft answer if action_type is 'direct_answer'.")
     refusal_reason: Optional[str] = Field(default=None, description="Refusal rationale if action_type is 'refusal'.")
+
+    @model_validator(mode="before")
+    @classmethod
+    def resolve_action_rationale_alias(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "thought" in data and ("action_rationale" not in data or not data["action_rationale"]):
+                data["action_rationale"] = data["thought"]
+        return data
+
+    @property
+    def thought(self) -> str:
+        """Backward compatibility alias for action_rationale."""
+        return self.action_rationale
 
 
 class AgentStep(BaseModel):
     """Immutable audit record of a single step in the agent reasoning and execution loop."""
 
+    model_config = ConfigDict(frozen=True)
+
     step_index: int = Field(ge=0, description="0-based sequence index.")
     state: str = Field(description="Agent state at start of step.")
-    thought: str = Field(default="", description="Reasoning thought produced during planning.")
+    action_rationale: str = Field(default="", description="Concise rationale for selected action.")
+    decision_summary: str = Field(default="", description="High-level summary of action or decision taken.")
+    observation_summary: Optional[str] = Field(default=None, description="Concise summary of tool observation.")
     proposed_action: Optional[ProposedAction] = Field(default=None, description="Action proposed by planner.")
     authorized: bool = Field(default=False, description="Whether engine execution guardrails authorized the action.")
     authorization_rejection_reason: Optional[str] = Field(default=None, description="Reason if action was rejected.")
@@ -199,20 +253,37 @@ class AgentStep(BaseModel):
         description="ISO 8601 UTC step start timestamp.",
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def resolve_step_rationale_alias(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "thought" in data and ("action_rationale" not in data or not data["action_rationale"]):
+                data["action_rationale"] = data["thought"]
+        return data
+
+    @property
+    def thought(self) -> str:
+        """Backward compatibility alias for action_rationale."""
+        return self.action_rationale
+
 
 class BudgetConfig(BaseModel):
     """Multi-dimensional execution budget limits constraining agent autonomy."""
 
+    model_config = ConfigDict(frozen=True)
+
     max_iterations: int = Field(default=5, ge=1, le=20, description="Maximum planning/tool cycles.")
     timeout_seconds: float = Field(default=60.0, ge=0.01, description="Hard wall-clock ceiling across entire run.")
     max_total_tokens: int = Field(default=10000, ge=100, description="Cumulative ceiling on prompt + output tokens.")
-    tool_timeout_seconds: float = Field(default=15.0, ge=0.5, description="Per-tool timeout.")
+    tool_timeout_seconds: float = Field(default=15.0, ge=0.01, description="Per-tool timeout.")
     max_tool_invocations: int = Field(default=10, ge=1, description="Cumulative ceiling on tool calls.")
     detect_duplicate_calls: bool = Field(default=True, description="Whether to reject duplicate identical tool calls.")
 
 
 class BudgetConsumption(BaseModel):
     """Audit report of consumed execution resources against BudgetConfig."""
+
+    model_config = ConfigDict(frozen=True)
 
     iterations: int = Field(default=0, ge=0, description="Planning iterations executed.")
     elapsed_seconds: float = Field(default=0.0, ge=0.0, description="Total wall-clock duration.")
@@ -226,11 +297,13 @@ class BudgetConsumption(BaseModel):
 class AgentTrace(BaseModel):
     """Complete, structured, and immutable audit trace of an agent execution run."""
 
+    model_config = ConfigDict(frozen=True)
+
     run_id: str = Field(description="Unique UUID identifying this execution session.")
     query: str = Field(description="Original student query.")
     terminal_state: Optional[str] = Field(default=None, description="Final terminal state of execution.")
-    steps: List[AgentStep] = Field(default_factory=list, description="Ordered history of executed steps.")
-    transitions: List[StateTransitionRecord] = Field(default_factory=list, description="State transition log.")
+    steps: Tuple[AgentStep, ...] = Field(default_factory=tuple, description="Ordered immutable history of executed steps.")
+    transitions: Tuple[StateTransitionRecord, ...] = Field(default_factory=tuple, description="State transition log.")
     budget_consumed: BudgetConsumption = Field(default_factory=BudgetConsumption, description="Resource consumption.")
     final_answer: Optional[AcademicAnswer] = Field(default=None, description="Verified AcademicAnswer if successful.")
     refusal_explanation: Optional[str] = Field(default=None, description="Refusal explanation if terminated in abstention.")

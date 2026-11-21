@@ -1,5 +1,6 @@
 """Unit tests for Stage 6.1 ExecutionBudgetTracker."""
 
+import concurrent.futures
 import time
 import pytest
 from academic_agent.agent.budget import BudgetExceededError, ExecutionBudgetTracker
@@ -8,7 +9,7 @@ from academic_agent.agent.protocols import ExecutionBudgetTrackerProtocol
 
 
 class TestExecutionBudgetTracker:
-    """Test suite validating multi-dimensional resource bounds and duplicate tool interception."""
+    """Test suite validating multi-dimensional resource bounds, thread safety, and duplicate interception."""
 
     def test_protocol_conformance(self):
         """Tracker satisfies ExecutionBudgetTrackerProtocol."""
@@ -52,13 +53,17 @@ class TestExecutionBudgetTracker:
         assert tracker.get_exhausted_resource() == "tokens"
         assert tracker.token_usage.is_exact is False
 
-    def test_timeout_enforcement(self):
-        """Elapsed time exceeding timeout_seconds raises BudgetExceededError on next operation."""
-        cfg = BudgetConfig(timeout_seconds=0.1)  # 100 ms timeout
+    def test_timeout_and_deadline_helpers(self):
+        """Elapsed time exceeding timeout_seconds raises BudgetExceededError; deadline is computed."""
+        cfg = BudgetConfig(timeout_seconds=0.08)  # 80 ms timeout
         tracker = ExecutionBudgetTracker(config=cfg)
 
-        time.sleep(0.12)  # Wait for timeout to elapse
+        assert tracker.deadline > tracker.start_time
+        assert tracker.get_remaining_time() > 0.0
 
+        time.sleep(0.10)  # Wait for timeout to elapse
+
+        assert tracker.get_remaining_time() == 0.0
         with pytest.raises(BudgetExceededError, match="timeout_seconds"):
             tracker.record_iteration()
 
@@ -71,7 +76,7 @@ class TestExecutionBudgetTracker:
         tracker = ExecutionBudgetTracker(config=cfg)
 
         call1 = ToolCall(call_id="c1", tool_name="search", arguments={"q": "AR(1)", "k": 3})
-        call2 = ToolCall(call_id="c2", tool_name="search", arguments={"k": 3, "q": "AR(1)"})  # Same args, different order
+        call2 = ToolCall(call_id="c2", tool_name="search", arguments={"k": 3, "q": "AR(1)"})  # Same args, different key order
 
         auth1, reason1 = tracker.record_tool_call(call1)
         assert auth1 is True
@@ -104,3 +109,23 @@ class TestExecutionBudgetTracker:
         assert "Maximum tool invocations reached" in reason3
         assert tracker.is_exhausted() is True
         assert tracker.get_exhausted_resource() == "tool_invocations"
+
+    def test_multithreaded_concurrency_safety(self):
+        """Concurrent updates to tokens and tool calls are synchronized without race conditions."""
+        tracker = ExecutionBudgetTracker(config=BudgetConfig(max_total_tokens=100000, max_tool_invocations=1000))
+
+        def worker(w_id: int):
+            for i in range(20):
+                tracker.record_tokens(prompt=10, completion=5, is_exact=True)
+                tracker.record_tool_call(ToolCall(call_id=f"c_{w_id}_{i}", tool_name=f"tool_{w_id}_{i}"))
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+            futures = [executor.submit(worker, w) for w in range(8)]
+            for f in futures:
+                f.result()
+
+        # 8 workers * 20 iterations = 160 operations
+        assert tracker.tool_invocations == 160
+        assert tracker.token_usage.prompt_tokens == 1600
+        assert tracker.token_usage.completion_tokens == 800
+        assert tracker.token_usage.total_tokens == 2400
