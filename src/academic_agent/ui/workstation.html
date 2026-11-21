@@ -583,25 +583,43 @@
       function renderEvidenceList(items) {
         if (!items || items.length === 0) {
           evidenceCount.textContent = "0";
-          evidenceList.innerHTML = '<div class="p-2 text-on-surface-variant text-body-sm italic">No candidate slides retrieved.</div>';
+          evidenceList.textContent = "";
+          const emptyDiv = document.createElement("div");
+          emptyDiv.className = "p-2 text-on-surface-variant text-body-sm italic";
+          emptyDiv.textContent = "No candidate slides retrieved.";
+          evidenceList.appendChild(emptyDiv);
           return;
         }
-        evidenceCount.textContent = items.length;
-        evidenceList.innerHTML = "";
+        evidenceCount.textContent = String(items.length);
+        evidenceList.textContent = "";
         items.forEach((item, idx) => {
           const div = document.createElement("div");
           const isSelected = idx === selectedEvidenceIdx;
           div.className = `p-2 rounded-DEFAULT cursor-pointer transition-colors flex flex-col gap-0.5 border ${
             isSelected ? "bg-surface-container border-primary/40 font-semibold" : "bg-surface-container-low border-transparent hover:bg-surface-container"
           }`;
-          div.setAttribute("data-idx", idx);
-          div.innerHTML = `
-            <div class="flex items-center justify-between font-label-code text-body-sm ${isSelected ? "text-primary font-semibold" : "text-secondary"}">
-              <span>[${item.citation || item.title || "Slide " + (idx + 1)}]</span>
-              <span class="text-label-data ${isSelected ? "text-tertiary" : "text-on-surface-variant"}">score: ${item.score ? Number(item.score).toFixed(3) : "1.000"}</span>
-            </div>
-            <span class="font-body-sm text-on-surface text-[0.75rem] truncate">${item.excerpt || item.title || "Evidence record"}</span>
-          `;
+          div.setAttribute("data-idx", String(idx));
+
+          const topRow = document.createElement("div");
+          topRow.className = `flex items-center justify-between font-label-code text-body-sm ${isSelected ? "text-primary font-semibold" : "text-secondary"}`;
+
+          const citSpan = document.createElement("span");
+          citSpan.textContent = `[${item.citation || item.title || "Slide " + (idx + 1)}]`;
+
+          const scoreSpan = document.createElement("span");
+          scoreSpan.className = `text-label-data ${isSelected ? "text-tertiary" : "text-on-surface-variant"}`;
+          scoreSpan.textContent = `score: ${item.score ? Number(item.score).toFixed(3) : "1.000"}`;
+
+          topRow.appendChild(citSpan);
+          topRow.appendChild(scoreSpan);
+
+          const bottomSpan = document.createElement("span");
+          bottomSpan.className = "font-body-sm text-on-surface text-[0.75rem] truncate";
+          bottomSpan.textContent = item.excerpt || item.title || "Evidence record";
+
+          div.appendChild(topRow);
+          div.appendChild(bottomSpan);
+
           div.addEventListener("click", () => {
             selectedEvidenceIdx = idx;
             renderEvidenceList(items);
@@ -671,64 +689,116 @@
         });
       }
 
-      // Format markdown monograph with interactive citation pills
-      function formatMonograph(rawText, citations, evidenceItems) {
-        if (!rawText) return "<p class='italic text-on-surface-variant'>No answer text synthesized.</p>";
+      // Render monograph safely with interactive citation pills via DOM APIs
+      function renderMonograph(rawText, citations) {
+        monographContent.textContent = "";
+        if (!rawText) {
+          const emptyP = document.createElement("p");
+          emptyP.className = "italic text-on-surface-variant";
+          emptyP.textContent = "No answer text synthesized.";
+          monographContent.appendChild(emptyP);
+          return;
+        }
 
-        // Replace citation citations like [Lecture 4, p. 18] or [stat601_lec04_s18_c02] with clickable pills
-        let formatted = rawText
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;");
+        const paragraphs = rawText.split(/\n\n+/);
+        paragraphs.forEach((pText, pIdx) => {
+          let targetEl;
+          let textContent = pText.trim();
 
-        // Parse paragraphs
-        const paragraphs = formatted.split(/\n\n+/);
-        let htmlOut = "";
+          if (textContent.startsWith("# ")) {
+            targetEl = document.createElement("h1");
+            targetEl.className = "font-headline-lg text-headline-lg text-on-surface tracking-tight mt-2";
+            textContent = textContent.slice(2);
+          } else if (textContent.startsWith("## ")) {
+            targetEl = document.createElement("h2");
+            targetEl.className = "font-headline-sm text-headline-sm text-primary flex items-center gap-2 mt-2";
+            textContent = textContent.slice(3);
+          } else if (textContent.startsWith("### ")) {
+            targetEl = document.createElement("h3");
+            targetEl.className = "font-headline-sm text-headline-sm text-secondary mt-1";
+            textContent = textContent.slice(4);
+          } else {
+            targetEl = document.createElement("p");
+            targetEl.className = "font-prose-editorial text-prose-editorial text-on-surface text-justify leading-relaxed";
+          }
 
-        paragraphs.forEach((p, pIdx) => {
-          // Replace [Citation] with button
-          const pillReplaced = p.replace(/\[([^\]]+)\]/g, (match, label) => {
-            // Find matching citation or evidence
+          const citationRegex = /\[([^\]]+)\]/g;
+          let lastIndex = 0;
+          let match;
+
+          while ((match = citationRegex.exec(textContent)) !== null) {
+            if (match.index > lastIndex) {
+              const textBefore = textContent.slice(lastIndex, match.index);
+              targetEl.appendChild(document.createTextNode(textBefore));
+            }
+
+            const label = match[1];
             let matchEv = null;
             if (activeCitations && activeCitations.length > 0) {
               matchEv = activeCitations.find(c => c.citation === label || c.chunk_id === label || label.includes(c.page ? c.page.toString() : "___"));
             }
-            const chunkId = matchEv ? matchEv.chunk_id : `cit_${pIdx}`;
-            const score = matchEv ? matchEv.score : "0.95";
-            const excerpt = matchEv ? matchEv.excerpt : label;
-            return `<button type="button" class="citation-pill inline-flex items-center gap-1 font-label-code text-body-sm px-1.5 py-0.2 bg-primary/10 text-primary rounded-DEFAULT align-baseline font-medium cursor-pointer transition-colors shadow-sm ml-1" data-citation="${label}" data-chunk-id="${chunkId}" data-score="${score}" data-excerpt="${excerpt}"><span class="material-symbols-outlined text-[12px]">link</span>[${label}]</button>`;
-          });
 
-          if (pillReplaced.startsWith("# ")) {
-            htmlOut += `<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight mt-2">${pillReplaced.slice(2)}</h1>`;
-          } else if (pillReplaced.startsWith("## ")) {
-            htmlOut += `<h2 class="font-headline-sm text-headline-sm text-primary flex items-center gap-2 mt-2"><span>${pillReplaced.slice(3)}</span></h2>`;
-          } else if (pillReplaced.startsWith("### ")) {
-            htmlOut += `<h3 class="font-headline-sm text-headline-sm text-secondary mt-1">${pillReplaced.slice(4)}</h3>`;
-          } else {
-            htmlOut += `<p class="font-prose-editorial text-prose-editorial text-on-surface text-justify leading-relaxed">${pillReplaced}</p>`;
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "citation-pill inline-flex items-center gap-1 font-label-code text-body-sm px-1.5 py-0.2 bg-primary/10 text-primary rounded-DEFAULT align-baseline font-medium cursor-pointer transition-colors shadow-sm ml-1";
+            btn.setAttribute("data-citation", label);
+            btn.setAttribute("data-chunk-id", matchEv ? matchEv.chunk_id : `cit_${pIdx}`);
+            btn.setAttribute("data-score", String(matchEv ? matchEv.score : 0.95));
+            btn.setAttribute("data-excerpt", matchEv ? matchEv.excerpt : label);
+
+            const iconSpan = document.createElement("span");
+            iconSpan.className = "material-symbols-outlined text-[12px]";
+            iconSpan.textContent = "link";
+
+            btn.appendChild(iconSpan);
+            btn.appendChild(document.createTextNode(`[${label}]`));
+
+            targetEl.appendChild(btn);
+            lastIndex = match.index + match[0].length;
           }
+
+          if (lastIndex < textContent.length) {
+            targetEl.appendChild(document.createTextNode(textContent.slice(lastIndex)));
+          }
+
+          monographContent.appendChild(targetEl);
         });
 
-        return htmlOut;
+        bindCitationPills();
       }
 
-      // Add Step to Telemetry Accordion
+      // Add Step to Telemetry Accordion safely using DOM creation
       function appendTelemetryStep(step) {
         const stepDiv = document.createElement("div");
-        const idxStr = String(step.step_index + 1).padStart(2, "0");
+        const idxStr = String((step.step_index ?? 0) + 1).padStart(2, "0");
         const isTool = step.action_type === "TOOL_CALL" || step.tool_name;
-        const isTerminal = step.state?.startsWith("TERMINATED");
+        const isTerminal = typeof step.state === "string" && step.state.startsWith("TERMINATED");
         const colorClass = isTerminal ? "text-tertiary font-bold" : (isTool ? "text-primary font-semibold" : "text-secondary font-medium");
         const bgClass = isTool ? "bg-surface-container-low px-space-xs rounded-DEFAULT" : "";
 
         stepDiv.className = `flex items-start gap-space-sm py-1 font-label-code text-body-sm border-b border-outline-variant/20 ${bgClass}`;
-        stepDiv.innerHTML = `
-          <div class="w-6 text-center font-label-data text-label-data ${isTool ? "text-primary font-bold" : "text-on-surface-variant"} pt-0.5">${idxStr}</div>
-          <div class="w-40 shrink-0 ${colorClass}">[${step.tool_name || step.state || "STEP"}]</div>
-          <div class="flex-1 text-on-surface truncate">${step.rationale || step.observation_snippet || "Step completed"}</div>
-          <div class="font-label-data text-label-data text-on-surface-variant">${Math.round(step.latency_ms || 0)}ms • ${step.tokens_used || 0} tok</div>
-        `;
+
+        const idxDiv = document.createElement("div");
+        idxDiv.className = `w-6 text-center font-label-data text-label-data ${isTool ? "text-primary font-bold" : "text-on-surface-variant"} pt-0.5`;
+        idxDiv.textContent = idxStr;
+
+        const nameDiv = document.createElement("div");
+        nameDiv.className = `w-40 shrink-0 ${colorClass}`;
+        nameDiv.textContent = `[${step.tool_name || step.state || "STEP"}]`;
+
+        const rationaleDiv = document.createElement("div");
+        rationaleDiv.className = "flex-1 text-on-surface truncate";
+        rationaleDiv.textContent = step.rationale || step.observation_snippet || "Step completed";
+
+        const metaDiv = document.createElement("div");
+        metaDiv.className = "font-label-data text-label-data text-on-surface-variant";
+        metaDiv.textContent = `${Math.round(step.latency_ms || 0)}ms • ${step.tokens_used || 0} tok`;
+
+        stepDiv.appendChild(idxDiv);
+        stepDiv.appendChild(nameDiv);
+        stepDiv.appendChild(rationaleDiv);
+        stepDiv.appendChild(metaDiv);
+
         telemetryBody.appendChild(stepDiv);
       }
 
@@ -784,7 +854,7 @@
         sufficiencyBadge.textContent = "Sufficiency: EVALUATING...";
         sufficiencyBadge.className = "font-label-data text-label-data bg-primary/10 text-primary px-1.5 py-0.5 rounded-DEFAULT font-semibold";
         sufficiencyLabel.textContent = "Grounded retrieval & reasoning in progress";
-        telemetryBody.innerHTML = "";
+        telemetryBody.textContent = "";
         telemetrySummary.textContent = "Streaming real-time FSM transitions...";
 
         const filters = currentFilterLecture ? { lecture_id: currentFilterLecture } : null;
@@ -900,17 +970,51 @@
 
         telemetrySummary.textContent = `${p.total_steps || 1} FSM Transitions • ${p.total_tokens || 0} tokens • ${Math.round(p.duration_ms || 0)}ms latency`;
 
-        // Update citations and evidence list if provided
+        // Update citations and evidence list from SSE payload or previous state
+        if (p.citations && p.citations.length > 0) {
+          activeCitations = p.citations.map((c, i) => ({
+            citation: c.citation_label || `[Citation ${i + 1}]`,
+            chunk_id: c.evidence_id || `chunk_${i + 1}`,
+            score: 0.95,
+            page: (c.source_pages && c.source_pages[0]) || 1,
+            title: c.source_file || `Lecture Slide Chunk`,
+            excerpt: c.excerpt || "",
+            lecture: c.source_file || "Course Corpus",
+          }));
+          renderEvidenceList(activeCitations);
+          updateInspector(activeCitations[0]);
+        } else if (p.evidence_items && p.evidence_items.length > 0) {
+          activeCitations = p.evidence_items.map((ev, i) => ({
+            citation: `[Evidence ${i + 1}]`,
+            chunk_id: ev.chunk_id || ev.record_id || `chunk_${i + 1}`,
+            score: ev.score || 0.95,
+            page: (ev.source_pages && ev.source_pages[0]) || 1,
+            title: ev.source_file || `Lecture Slide Chunk`,
+            excerpt: ev.text || "",
+            lecture: ev.source_file || "Course Corpus",
+          }));
+          renderEvidenceList(activeCitations);
+          updateInspector(activeCitations[0]);
+        }
+
         if (p.answer_text) {
-          monographContent.innerHTML = formatMonograph(p.answer_text, p.citation_labels, activeCitations);
-          bindCitationPills();
+          renderMonograph(p.answer_text, activeCitations);
         } else if (p.refusal_explanation) {
-          monographContent.innerHTML = `
-            <div class="bg-surface-container-low p-space-lg rounded-DEFAULT border-l-4 border-secondary flex flex-col gap-space-xs">
-              <span class="font-headline-sm text-headline-sm text-secondary font-semibold">Scholarly Abstention Notice</span>
-              <p class="font-prose-editorial text-prose-editorial text-on-surface leading-relaxed">${p.refusal_explanation}</p>
-            </div>
-          `;
+          monographContent.textContent = "";
+          const refusalBox = document.createElement("div");
+          refusalBox.className = "bg-surface-container-low p-space-lg rounded-DEFAULT border-l-4 border-secondary flex flex-col gap-space-xs";
+
+          const titleSpan = document.createElement("span");
+          titleSpan.className = "font-headline-sm text-headline-sm text-secondary font-semibold";
+          titleSpan.textContent = "Scholarly Abstention Notice";
+
+          const pText = document.createElement("p");
+          pText.className = "font-prose-editorial text-prose-editorial text-on-surface leading-relaxed";
+          pText.textContent = p.refusal_explanation;
+
+          refusalBox.appendChild(titleSpan);
+          refusalBox.appendChild(pText);
+          monographContent.appendChild(refusalBox);
         }
       }
 
@@ -924,7 +1028,7 @@
           });
           const resData = await response.json();
           if (resData.trace_steps) {
-            telemetryBody.innerHTML = "";
+            telemetryBody.textContent = "";
             resData.trace_steps.forEach(st => appendTelemetryStep({
               step_index: st.step_index,
               state: st.current_state,

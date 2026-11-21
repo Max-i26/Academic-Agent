@@ -334,3 +334,33 @@ class TestWorkstationEndToEnd:
             assert events[-1]["event_type"] == "run_completed"
             assert events[-1]["payload"]["status"] == ServiceRunStatus.COMPLETED.value
             assert "[Lecture 4, p. 18]" in events[-1]["payload"]["answer_text"]
+
+    def test_workstation_xss_sanitization(self, e2e_client):
+        """Verify that workstation UI contains zero unsafe innerHTML interpolations."""
+        client, _ = e2e_client
+        response = client.get("/api/v1/workstation")
+        assert response.status_code == 200
+        html = response.text
+
+        # 1. Zero innerHTML in workstation script
+        script_start = html.find("<script>")
+        script_end = html.rfind("</script>")
+        assert script_start != -1 and script_end != -1
+        script_content = html[script_start:script_end]
+        assert "innerHTML" not in script_content, "Detected unsafe innerHTML usage in workstation JavaScript!"
+
+        # 2. Strict DOM creation APIs used for rendering dynamic content
+        assert "document.createElement" in script_content
+        assert "document.createTextNode" in script_content
+        assert "renderMonograph" in script_content
+
+    def test_workstation_adversarial_xss_payload_handling(self, e2e_client):
+        """Verify that queries with embedded script tags execute and return safe, sanitized responses."""
+        client, _ = e2e_client
+        xss_query = "<script>alert('pwned')</script><img src=x onerror=alert(1)> What is AR(1) stationarity?"
+        resp = client.post("/api/v1/query", json={"query": xss_query})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == ServiceRunStatus.COMPLETED.value
+        # The query is processed without injecting script tags into html execution
+        assert data["query"] == xss_query

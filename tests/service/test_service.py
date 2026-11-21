@@ -464,7 +464,9 @@ class TestSynchronousQueryExecution:
 
         assert response.status == ServiceRunStatus.ERROR
         assert response.terminal_state == AgentTerminalState.TERMINATED_ERROR.value
-        assert "Engine catastrophic crash" in response.terminal_reason
+        assert "Internal service execution error" in response.terminal_reason
+        assert "Engine catastrophic crash" not in response.terminal_reason
+        assert "Engine catastrophic crash" not in response.answer_text
 
 
 # ============================================================================
@@ -730,7 +732,9 @@ class TestServiceHardening:
             req = QueryRequest(query="What is AR(1)?", run_id=run_id)
             resp = mock_agent_service.run_query(req)
             assert resp.status == ServiceRunStatus.ERROR
-            assert "Simulated execution failure!" in resp.terminal_reason
+            assert "Internal service execution error" in resp.terminal_reason
+            assert "Simulated execution failure!" not in resp.terminal_reason
+            assert "Simulated execution failure!" not in resp.answer_text
 
             assert mock_agent_service.is_active(run_id) is False
             assert run_id not in mock_agent_service._active_runs

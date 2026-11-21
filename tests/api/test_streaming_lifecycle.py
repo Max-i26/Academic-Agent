@@ -267,3 +267,145 @@ class TestStreamingLifecycleAndRaceElimination:
             assert last_event.event_type in (StreamEventType.RUN_COMPLETED, StreamEventType.RUN_FAILED)
 
         asyncio.run(_test())
+
+    def test_disconnect_before_worker_registration(self):
+        """Verify that immediate disconnect right at stream initialization cancels the run."""
+        service = build_service_with_delay(delay_sec=0.5)
+        run_id = f"pre_reg_cancel_{uuid.uuid4().hex[:6]}"
+        req = QueryRequest(query="Explain AR(1) stationarity.", run_id=run_id)
+
+        async def _test():
+            gen = service.stream_query_async(req)
+            # Before consuming any item, close the async generator (simulating instant disconnect)
+            await gen.aclose()
+            # Worker must be cooperatively cancelled and not remain active
+            await asyncio.sleep(0.3)
+            assert service.is_active(run_id) is False
+
+        asyncio.run(_test())
+
+    def test_massive_event_stream_over_500_events_no_deadlock(self):
+        """Verify that emitting >500 events in async mode does not deadlock or crash."""
+        service = build_service_with_delay(delay_sec=0.0)
+
+        # Custom agent run that emits 600 steps
+        def emit_600_steps(query, cancellation_token, config, run_id, observers=None):
+            if observers:
+                for obs in observers:
+                    for i in range(600):
+                        step = AgentStep(
+                            step_index=i,
+                            state="PLANNING",
+                            proposed_action=ProposedAction(
+                                action_type=ActionType.SEARCH,
+                                rationale="Stress testing async stream backpressure",
+                            ),
+                            token_usage=TokenAccounting(prompt_tokens=1, completion_tokens=0, total_tokens=1),
+                            latency_ms=1.0,
+                        )
+                        obs.on_step_completed(run_id, step)
+            trace = AgentTrace(
+                run_id=run_id,
+                query=query,
+                terminal_state=AgentTerminalState.TERMINATED_SUCCESS.value,
+                budget_consumed=BudgetConsumption(
+                    token_usage=TokenAccounting(prompt_tokens=600, completion_tokens=0, total_tokens=600),
+                    wall_time_seconds=0.1,
+                ),
+                total_latency_ms=100.0,
+                steps=(),
+                transitions=(),
+            )
+            if observers:
+                for obs in observers:
+                    obs.on_run_completed(run_id, trace)
+            return trace
+
+        service.agent.run = emit_600_steps
+
+        async def _test():
+            req = QueryRequest(query="Stress test async queue")
+            events = []
+            async for ev in service.stream_query_async(req):
+                events.append(ev)
+
+            assert len(events) > 0
+            # Confirm terminal event was preserved and delivered despite saturation
+            assert events[-1].event_type == StreamEventType.RUN_COMPLETED
+            assert events[-1].payload["status"] == ServiceRunStatus.COMPLETED.value
+
+        asyncio.run(_test())
+
+    def test_queue_saturation_preserves_terminal_event(self):
+        """Verify that when async queue is saturated, intermediate steps are dropped but terminal event is preserved."""
+        service = build_service_with_delay(delay_sec=0.0)
+
+        def flood_run(query, cancellation_token, config, run_id, observers=None):
+            if observers:
+                for obs in observers:
+                    for i in range(550):
+                        obs.on_step_completed(
+                            run_id,
+                            AgentStep(
+                                step_index=i,
+                                state="PLANNING",
+                                proposed_action=ProposedAction(action_type=ActionType.SEARCH, rationale=f"step {i}"),
+                                token_usage=TokenAccounting(prompt_tokens=1, completion_tokens=0, total_tokens=1),
+                                latency_ms=0.5,
+                            ),
+                        )
+            trace = AgentTrace(
+                run_id=run_id,
+                query=query,
+                terminal_state=AgentTerminalState.TERMINATED_SUCCESS.value,
+                budget_consumed=BudgetConsumption(
+                    token_usage=TokenAccounting(prompt_tokens=550, completion_tokens=0, total_tokens=550),
+                    wall_time_seconds=0.05,
+                ),
+                total_latency_ms=50.0,
+                steps=(),
+                transitions=(),
+            )
+            if observers:
+                for obs in observers:
+                    obs.on_run_completed(run_id, trace)
+            return trace
+
+        service.agent.run = flood_run
+
+        async def _test():
+            req = QueryRequest(query="Test saturation")
+            events = []
+            gen = service.stream_query_async(req)
+            async for ev in gen:
+                events.append(ev)
+                if len(events) == 5:
+                    # Artificially delay consumer to let worker flood queue
+                    await asyncio.sleep(0.05)
+
+            assert events[-1].event_type == StreamEventType.RUN_COMPLETED
+
+        asyncio.run(_test())
+
+    def test_concurrent_independent_streams(self):
+        """Verify that multiple concurrent streams execute independently without queue cross-talk."""
+        service = build_service_with_delay(delay_sec=0.02)
+
+        async def _consume_stream(stream_idx: int):
+            run_id = f"concurrent_run_{stream_idx}_{uuid.uuid4().hex[:6]}"
+            req = QueryRequest(query=f"Explain AR(1) stream {stream_idx}", run_id=run_id)
+            received = []
+            async for ev in service.stream_query_async(req):
+                assert ev.run_id == run_id
+                received.append(ev)
+            assert len(received) >= 2
+            assert received[-1].event_type == StreamEventType.RUN_COMPLETED
+            return run_id
+
+        async def _main():
+            results = await asyncio.gather(*[_consume_stream(i) for i in range(5)])
+            assert len(set(results)) == 5
+            for r_id in results:
+                assert service.is_active(r_id) is False
+
+        asyncio.run(_main())

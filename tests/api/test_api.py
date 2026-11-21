@@ -432,7 +432,8 @@ class TestQueryEndpoints:
         )
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         data = response.json()
-        assert data["error"] == "Query execution failed: Catastrophic database crash!"
+        assert data["error"] == "An internal error occurred during query execution."
+        assert "Catastrophic database crash!" not in response.text
 
 
 # ============================================================================

@@ -53,8 +53,8 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
 
     def __init__(
         self,
-        event_queue: queue.Queue,
-        run_id: str,
+        event_queue: Optional[queue.Queue] = None,
+        run_id: str = "",
         asyncio_loop: Optional[asyncio.AbstractEventLoop] = None,
         asyncio_queue: Optional[asyncio.Queue] = None,
     ) -> None:
@@ -66,14 +66,51 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
         self.has_completed = False
 
     def _emit(self, event: Optional[StreamEvent]) -> None:
-        """Deliver event to both sync queue and optional async queue bridge."""
-        try:
-            self.queue.put(event)
-        except Exception:
-            pass
-        if self.asyncio_loop is not None and self.asyncio_queue is not None:
+        """Deliver event to sync queue or async queue bridge with backpressure safety."""
+        # 1. Synchronous delivery if a sync queue is configured
+        if self.queue is not None:
             try:
-                self.asyncio_loop.call_soon_threadsafe(self.asyncio_queue.put_nowait, event)
+                self.queue.put(event, timeout=5.0)
+            except Exception:
+                pass
+
+        # 2. Asynchronous delivery if an async queue bridge is configured
+        if self.asyncio_loop is not None and self.asyncio_queue is not None:
+            if self.asyncio_loop.is_closed():
+                return
+
+            def _safe_async_put() -> None:
+                assert self.asyncio_queue is not None
+                try:
+                    self.asyncio_queue.put_nowait(event)
+                except asyncio.QueueFull:
+                    # Guarantee terminal events and sentinel are NEVER dropped under saturation
+                    is_terminal = (
+                        event is None
+                        or (
+                            isinstance(event, StreamEvent)
+                            and event.event_type
+                            in (
+                                StreamEventType.RUN_COMPLETED,
+                                StreamEventType.RUN_FAILED,
+                                StreamEventType.RUN_CANCELLED,
+                            )
+                        )
+                    )
+                    if is_terminal:
+                        try:
+                            self.asyncio_queue.get_nowait()
+                        except Exception:
+                            pass
+                        try:
+                            self.asyncio_queue.put_nowait(event)
+                        except Exception:
+                            pass
+                    else:
+                        logger.debug("Dropping intermediate telemetry frame due to saturated async queue.")
+
+            try:
+                self.asyncio_loop.call_soon_threadsafe(_safe_async_put)
             except Exception:
                 pass
 
@@ -99,9 +136,12 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
             }
             if step.tool_result is not None:
                 tool_payload["success"] = step.tool_result.success
-                if step.tool_result.success:
-                    tool_payload["output_snippet"] = str(step.tool_result.output)[:200]
-                else:
+                out_snippet = getattr(step.tool_result, "output_snippet", None)
+                if out_snippet:
+                    tool_payload["output_snippet"] = out_snippet
+                elif isinstance(step.tool_result.output, str):
+                    tool_payload["output_snippet"] = step.tool_result.output[:300]
+                elif step.tool_result.error_message:
                     tool_payload["output_snippet"] = step.tool_result.error_message
                 tool_payload["latency_ms"] = step.tool_result.latency_ms
 
@@ -127,10 +167,24 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
             )
             self._emit(synth_event)
 
-        # 3. Overall step completed event
+        # 3. Overall step completed event with complete canonical fields and aliases
         action_type_val = (
             step.proposed_action.action_type.value if step.proposed_action else "UNKNOWN"
         )
+        tool_name = step.tool_call.tool_name if step.tool_call else None
+        tool_args = dict(step.tool_call.arguments) if step.tool_call else None
+        obs_snippet = None
+        is_err = False
+        if step.tool_result is not None:
+            is_err = not step.tool_result.success
+            out_snippet = getattr(step.tool_result, "output_snippet", None)
+            if out_snippet:
+                obs_snippet = out_snippet
+            elif isinstance(step.tool_result.output, str):
+                obs_snippet = step.tool_result.output[:300]
+            elif step.tool_result.error_message:
+                obs_snippet = step.tool_result.error_message
+
         step_event = StreamEvent(
             event_id=str(uuid.uuid4()),
             event_type=StreamEventType.STEP_COMPLETED,
@@ -138,11 +192,20 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
             timestamp=now,
             step_index=step.step_index,
             payload={
+                "step_index": step.step_index,
                 "state": step.state,
+                "current_state": step.state,
                 "action_type": action_type_val,
                 "action_rationale": step.action_rationale,
                 "decision_summary": step.decision_summary,
+                "tool_name": tool_name,
+                "tool_arguments": tool_args,
+                "observation_snippet": obs_snippet,
+                "is_error": is_err,
                 "latency_ms": step.latency_ms,
+                "step_latency_ms": step.latency_ms,
+                "tokens_used": step.token_usage.total_tokens if getattr(step, "token_usage", None) else getattr(step, "tokens_used", 0),
+                "token_usage": {"total_tokens": step.token_usage.total_tokens if getattr(step, "token_usage", None) else getattr(step, "tokens_used", 0)},
                 "authorized": step.authorized,
             },
         )
@@ -187,6 +250,29 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
             payload["citation_labels"] = [
                 item.citation_label for item in trace.final_answer.evidence_context.items
             ]
+            payload["citations"] = [
+                {
+                    "evidence_id": item.evidence_id,
+                    "citation_label": item.citation_label,
+                    "source_file": item.evidence.source_file,
+                    "source_pages": list(item.evidence.source_pages),
+                    "excerpt": item.evidence.text,
+                    "unit_ids": list(item.evidence.source_unit_ids),
+                }
+                for item in trace.final_answer.evidence_context.items
+            ]
+            payload["evidence_items"] = [
+                {
+                    "evidence_id": item.evidence_id,
+                    "chunk_id": item.evidence.chunk_id,
+                    "record_id": item.evidence.record_id,
+                    "source_file": item.evidence.source_file,
+                    "source_pages": list(item.evidence.source_pages),
+                    "text": item.evidence.text,
+                    "score": item.evidence.score,
+                }
+                for item in trace.final_answer.evidence_context.items
+            ]
         elif trace.refusal_explanation is not None:
             payload["refusal_explanation"] = trace.refusal_explanation
 
@@ -217,17 +303,18 @@ class AcademicAgentService:
         self._active_runs: Dict[str, RunSummary] = {}
         self._completed_runs: OrderedDict[str, QueryResponse] = OrderedDict()
         self._run_summaries: OrderedDict[str, RunSummary] = OrderedDict()
+        self._cancelled_early: Dict[str, str] = {}
         self._lock = threading.RLock()
 
     def run_query(
         self,
         request: QueryRequest,
         observers: Optional[Sequence[AgentLifecycleObserverProtocol]] = None,
+        cancellation_token: Optional[CancellationToken] = None,
     ) -> QueryResponse:
         """Execute a blocking query run and return the comprehensive grounded response."""
         run_id = request.run_id or str(uuid.uuid4())
         created_at_iso = datetime.now(timezone.utc).isoformat()
-        token = CancellationToken()
 
         run_summary = RunSummary(
             run_id=run_id,
@@ -237,12 +324,19 @@ class AcademicAgentService:
         )
 
         with self._lock:
-            if run_id in self._active_tokens:
-                raise ValueError(f"Run ID '{run_id}' is already actively executing.")
             if run_id in self._completed_runs:
                 raise ValueError(f"Run ID '{run_id}' has already been executed.")
-            self._active_tokens[run_id] = token
-            self._active_runs[run_id] = run_summary
+            if run_id in self._active_tokens:
+                if cancellation_token is not None and self._active_tokens[run_id] is cancellation_token:
+                    token = cancellation_token
+                else:
+                    raise ValueError(f"Run ID '{run_id}' is already actively executing.")
+            else:
+                token = cancellation_token if cancellation_token is not None else CancellationToken()
+                if run_id in self._cancelled_early:
+                    token.cancel(reason=self._cancelled_early.pop(run_id))
+                self._active_tokens[run_id] = token
+                self._active_runs[run_id] = run_summary
 
         response: Optional[QueryResponse] = None
         try:
@@ -262,8 +356,8 @@ class AcademicAgentService:
                 query=request.query,
                 status=ServiceRunStatus.ERROR,
                 terminal_state=AgentTerminalState.TERMINATED_ERROR.value,
-                terminal_reason=f"Service error: {str(exc)}",
-                answer_text=f"An unexpected error occurred during execution: {str(exc)}",
+                terminal_reason="Internal service execution error occurred.",
+                answer_text="An internal error occurred while processing the request. Please consult system logs or retry.",
             )
             if observers:
                 for obs in observers:
@@ -272,7 +366,7 @@ class AcademicAgentService:
                             run_id=run_id,
                             query=request.query,
                             terminal_state=AgentTerminalState.TERMINATED_ERROR.value,
-                            refusal_explanation=f"Execution error: {str(exc)}",
+                            refusal_explanation="Internal service execution error occurred.",
                             budget_consumed=BudgetConsumption(
                                 token_usage=TokenAccounting(total_tokens=0),
                                 wall_time_seconds=0.0,
@@ -316,8 +410,24 @@ class AcademicAgentService:
     def stream_query(self, request: QueryRequest) -> Iterator[StreamEvent]:
         """Execute query run and yield real-time streaming lifecycle events."""
         run_id = request.run_id or str(uuid.uuid4())
-        # Attach explicit run_id to request so child thread uses it
         req_with_id = request if request.run_id == run_id else request.model_copy(update={"run_id": run_id})
+        token = CancellationToken()
+        created_at_iso = datetime.now(timezone.utc).isoformat()
+
+        with self._lock:
+            if run_id in self._completed_runs:
+                raise ValueError(f"Run ID '{run_id}' has already been executed.")
+            if run_id in self._active_tokens:
+                raise ValueError(f"Run ID '{run_id}' is already actively executing.")
+            if run_id in self._cancelled_early:
+                token.cancel(reason=self._cancelled_early.pop(run_id))
+            self._active_tokens[run_id] = token
+            self._active_runs[run_id] = RunSummary(
+                run_id=run_id,
+                query=request.query,
+                status=ServiceRunStatus.RUNNING,
+                created_at_iso=created_at_iso,
+            )
 
         event_queue: queue.Queue[Optional[StreamEvent]] = queue.Queue(maxsize=500)
         observer = _StreamingObserver(event_queue=event_queue, run_id=run_id)
@@ -326,22 +436,22 @@ class AcademicAgentService:
 
         def _worker() -> None:
             try:
-                self.run_query(req_with_id, observers=[observer])
+                self.run_query(req_with_id, observers=[observer], cancellation_token=token)
             except Exception as exc:
                 logger.exception("Background worker failure in stream_query: %s", exc)
                 worker_error.append(exc)
-                event_queue.put(
+                observer._emit(
                     StreamEvent(
                         event_id=str(uuid.uuid4()),
                         event_type=StreamEventType.RUN_FAILED,
                         run_id=run_id,
                         timestamp=time.time(),
-                        payload={"error": str(exc)},
+                        payload={"error": "An internal error occurred during execution."},
                     )
                 )
             finally:
                 if not observer.has_completed:
-                    event_queue.put(None)
+                    observer._emit(None)
 
         worker_thread = threading.Thread(target=_worker, daemon=True, name=f"agent-stream-{run_id[:8]}")
         worker_thread.start()
@@ -353,7 +463,6 @@ class AcademicAgentService:
                     break
                 yield item
         except GeneratorExit:
-            # Client disconnected or aborted consumption early -> cooperatively cancel run
             logger.info("Client aborted stream for run %s, requesting cooperative cancellation", run_id)
             self.cancel_run(run_id, reason="Client disconnected or closed stream.")
             raise
@@ -369,10 +478,28 @@ class AcademicAgentService:
             request if request.run_id == run_id else request.model_copy(update={"run_id": run_id})
         )
 
+        token = CancellationToken()
+        created_at_iso = datetime.now(timezone.utc).isoformat()
+
+        with self._lock:
+            if run_id in self._completed_runs:
+                raise ValueError(f"Run ID '{run_id}' has already been executed.")
+            if run_id in self._active_tokens:
+                raise ValueError(f"Run ID '{run_id}' is already actively executing.")
+            if run_id in self._cancelled_early:
+                token.cancel(reason=self._cancelled_early.pop(run_id))
+            self._active_tokens[run_id] = token
+            self._active_runs[run_id] = RunSummary(
+                run_id=run_id,
+                query=request.query,
+                status=ServiceRunStatus.RUNNING,
+                created_at_iso=created_at_iso,
+            )
+
         loop = asyncio.get_running_loop()
         async_queue: asyncio.Queue[Optional[StreamEvent]] = asyncio.Queue(maxsize=500)
         observer = _StreamingObserver(
-            event_queue=queue.Queue(maxsize=500),
+            event_queue=None,
             run_id=run_id,
             asyncio_loop=loop,
             asyncio_queue=async_queue,
@@ -380,7 +507,7 @@ class AcademicAgentService:
 
         def _worker() -> None:
             try:
-                self.run_query(req_with_id, observers=[observer])
+                self.run_query(req_with_id, observers=[observer], cancellation_token=token)
             except Exception as exc:
                 logger.exception("Background worker failure in stream_query_async: %s", exc)
                 err_ev = StreamEvent(
@@ -388,12 +515,12 @@ class AcademicAgentService:
                     event_type=StreamEventType.RUN_FAILED,
                     run_id=run_id,
                     timestamp=time.time(),
-                    payload={"error": str(exc)},
+                    payload={"error": "An internal error occurred during execution."},
                 )
-                loop.call_soon_threadsafe(async_queue.put_nowait, err_ev)
+                observer._emit(err_ev)
             finally:
                 if not observer.has_completed:
-                    loop.call_soon_threadsafe(async_queue.put_nowait, None)
+                    observer._emit(None)
 
         worker_thread = threading.Thread(
             target=_worker, daemon=True, name=f"agent-async-stream-{run_id[:8]}"
@@ -412,11 +539,16 @@ class AcademicAgentService:
     def cancel_run(self, run_id: str, reason: Optional[str] = None) -> bool:
         """Request cooperative cancellation for an active execution run."""
         with self._lock:
+            if run_id in self._completed_runs:
+                return False
+
             token = self._active_tokens.get(run_id)
-            if token is not None and not token.is_cancelled:
-                token.cancel(reason=reason or "Cancellation requested by service caller.")
-                logger.info("Cancelled active run %s: %s", run_id, reason)
+            if token is not None:
+                if not token.is_cancelled:
+                    token.cancel(reason=reason or "Cancellation requested by service caller.")
+                    logger.info("Cancelled active run %s: %s", run_id, reason)
                 return True
+
             return False
 
     def is_active(self, run_id: str) -> bool:
