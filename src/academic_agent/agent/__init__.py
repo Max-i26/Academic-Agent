@@ -57,6 +57,7 @@ from academic_agent.agent.decision_policy import (
     DecisionPolicy,
 )
 from academic_agent.agent.planner import ReActStepPlanner
+from academic_agent.agent.orchestrator import AcademicAgent
 from academic_agent.agent.tools import (
     BaseAgentTool,
     AcademicSearchArgs,
@@ -129,8 +130,9 @@ __all__ = [
     "PolicyRejectionCategory",
     "PolicyDecision",
     "DecisionPolicy",
-    # ReAct Step Planner
+    # ReAct Step Planner & Orchestrator
     "ReActStepPlanner",
+    "AcademicAgent",
     # Academic Tools & Policies
     "BaseAgentTool",
     "AcademicSearchArgs",
