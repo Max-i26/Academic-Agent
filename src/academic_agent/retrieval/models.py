@@ -80,6 +80,18 @@ class RetrievalCandidate(BaseModel):
     content_type: str = Field(default="PARAGRAPH", description="Content classification.")
     fragment_index: int = Field(default=0, ge=0, description="0-based sequence index.")
     total_fragments: int = Field(default=1, ge=1, description="Total fragments produced for parent chunk.")
+    contributing_methods: list[str] = Field(
+        default_factory=list,
+        description="All retrieval methods that surfaced this candidate (e.g. ['dense', 'sparse']).",
+    )
+    method_scores: dict[str, float] = Field(
+        default_factory=dict,
+        description="Original raw scores from each contributing retrieval method.",
+    )
+    method_ranks: dict[str, int] = Field(
+        default_factory=dict,
+        description="Original 1-based ranks within each contributing retrieval method.",
+    )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Record and retrieval diagnostics metadata.")
 
     @property
@@ -89,6 +101,8 @@ class RetrievalCandidate(BaseModel):
 
     def to_evidence(self) -> "Evidence":
         """Convert this candidate directly into an Evidence object."""
+        methods = list(self.contributing_methods) if self.contributing_methods else [self.retrieval_method]
+        scores = dict(self.method_scores) if self.method_scores else {self.retrieval_method: self.score}
         return Evidence(
             record_id=self.record_id,
             chunk_id=self.chunk_id,
@@ -101,8 +115,8 @@ class RetrievalCandidate(BaseModel):
             fragment_index=self.fragment_index,
             total_fragments=self.total_fragments,
             score=self.score,
-            retrieval_methods=[self.retrieval_method],
-            method_scores={self.retrieval_method: self.score},
+            retrieval_methods=methods,
+            method_scores=scores,
             metadata=dict(self.metadata),
         )
 

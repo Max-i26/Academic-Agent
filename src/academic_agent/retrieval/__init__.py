@@ -20,6 +20,7 @@ from academic_agent.retrieval.dense_retriever import DenseRetriever
 from academic_agent.retrieval.sparse.tokenizer import AcademicTokenizer
 from academic_agent.retrieval.sparse.bm25 import BM25Index
 from academic_agent.retrieval.sparse_retriever import SparseRetriever
+from academic_agent.retrieval.fusion import ReciprocalRankFusion
 
 __all__ = [
     "RetrievalStrategy",
@@ -38,4 +39,5 @@ __all__ = [
     "AcademicTokenizer",
     "BM25Index",
     "SparseRetriever",
+    "ReciprocalRankFusion",
 ]
