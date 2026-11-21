@@ -192,6 +192,10 @@ class CitationOccurrence(BaseModel):
     start_char: int = Field(ge=0, description="Start character offset in generated text.")
     end_char: int = Field(ge=0, description="End character offset in generated text.")
     is_valid: bool = Field(default=False, description="True if evidence_id exists in the context.")
+    resolution_label: str = Field(
+        default="",
+        description="Resolved human-readable citation label when valid (e.g. '[Lecture 4, p. 18]').",
+    )
 
     @model_validator(mode="after")
     def validate_offsets(self) -> "CitationOccurrence":

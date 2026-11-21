@@ -24,6 +24,7 @@ from academic_agent.generation.synthesis.prompt.grounding_prompt_builder import 
     DEFAULT_SYSTEM_PROMPT,
     GroundingPromptBuilder,
 )
+from academic_agent.generation.synthesis.validation.citation_validator import CitationValidator
 
 __all__ = [
     "EvidenceSufficiency",
@@ -44,4 +45,5 @@ __all__ = [
     "EvidenceContextBuilder",
     "GroundingPromptBuilder",
     "DEFAULT_SYSTEM_PROMPT",
+    "CitationValidator",
 ]
