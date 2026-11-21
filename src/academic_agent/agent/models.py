@@ -208,24 +208,47 @@ class StateTransitionRecord(BaseModel):
     reason: Optional[str] = Field(default=None, description="Optional rationale or triggering condition.")
 
 
+class ActionType(str, Enum):
+    """Permitted discrete action categories proposed by the planner."""
+
+    SEARCH = "SEARCH"
+    FILTER = "FILTER"
+    SYNTHESIZE = "SYNTHESIZE"
+    CLARIFY = "CLARIFY"
+    ABSTAIN = "ABSTAIN"
+    FINISH = "FINISH"
+
+
 class ProposedAction(BaseModel):
     """Next action proposed by the LLM step planner before engine authorization."""
 
     model_config = ConfigDict(frozen=True)
 
     action_rationale: str = Field(default="", description="Concise rationale explaining why this action was selected.")
-    action_type: str = Field(description="Action category: 'tool_call', 'direct_answer', or 'refusal'.")
+    action_type: ActionType = Field(description="Action category: SEARCH, FILTER, SYNTHESIZE, CLARIFY, ABSTAIN, FINISH.")
     decision_summary: Optional[str] = Field(default=None, description="High-level summary of the decision.")
-    tool_call: Optional[ToolCall] = Field(default=None, description="Proposed tool invocation if action_type is 'tool_call'.")
-    direct_answer: Optional[str] = Field(default=None, description="Draft answer if action_type is 'direct_answer'.")
-    refusal_reason: Optional[str] = Field(default=None, description="Refusal rationale if action_type is 'refusal'.")
+    tool_call: Optional[ToolCall] = Field(default=None, description="Proposed tool invocation if action requires a tool.")
+    direct_answer: Optional[str] = Field(default=None, description="Direct communication text (clarification or finish).")
+    refusal_reason: Optional[str] = Field(default=None, description="Refusal rationale if action_type is ABSTAIN.")
 
     @model_validator(mode="before")
     @classmethod
-    def resolve_action_rationale_alias(cls, data: Any) -> Any:
+    def normalize_fields(cls, data: Any) -> Any:
         if isinstance(data, dict):
+            # Resolve backward-compatibility aliases
             if "thought" in data and ("action_rationale" not in data or not data["action_rationale"]):
                 data["action_rationale"] = data["thought"]
+            act = data.get("action_type")
+            if isinstance(act, str):
+                act_clean = act.upper().strip()
+                if act_clean in ActionType.__members__:
+                    data["action_type"] = ActionType[act_clean]
+                elif act_clean == "TOOL_CALL":
+                    data["action_type"] = ActionType.SEARCH
+                elif act_clean == "DIRECT_ANSWER":
+                    data["action_type"] = ActionType.FINISH
+                elif act_clean == "REFUSAL":
+                    data["action_type"] = ActionType.ABSTAIN
         return data
 
     @property

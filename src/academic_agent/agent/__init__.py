@@ -1,6 +1,7 @@
 """Academic-Agent Orchestration Subsystem (Phase 6)."""
 
 from academic_agent.agent.models import (
+    ActionType,
     AgentExecutionState,
     AgentTerminalState,
     AgentState,
@@ -31,6 +32,7 @@ from academic_agent.agent.fsm import AgentStateMachine
 from academic_agent.agent.budget import ExecutionBudgetTracker, BudgetExceededError
 from academic_agent.agent.registry import ToolRegistry
 from academic_agent.agent.dispatcher import ToolDispatcher
+from academic_agent.agent.parser import StructuralValidationError, StructuredPlannerParser
 from academic_agent.agent.tools import (
     BaseAgentTool,
     AcademicSearchArgs,
@@ -55,6 +57,7 @@ __all__ = [
     "VALID_STATE_TRANSITIONS",
     "AgentStateMachine",
     # Data Models & Policies
+    "ActionType",
     "ToolErrorCategory",
     "ToolSideEffectPolicy",
     "ToolCall",
@@ -80,6 +83,9 @@ __all__ = [
     # Tool Registry & Dispatcher
     "ToolRegistry",
     "ToolDispatcher",
+    # Structured Parser & Exceptions
+    "StructuralValidationError",
+    "StructuredPlannerParser",
     # Academic Tools & Policies
     "BaseAgentTool",
     "AcademicSearchArgs",
