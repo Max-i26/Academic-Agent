@@ -1,0 +1,2414 @@
+[
+  {
+    "record_id": "17aa1f9d3ee8456c#frag_0",
+    "chunk_id": "17aa1f9d3ee8456c",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      1
+    ],
+    "section_title": "Time Series Analysis and Forecasting",
+    "text": "DS5104  Time Series Analysis and Forecasting  Lecture 1: Why time matters in data  anupama@foc.sab.ac.lk"
+  },
+  {
+    "record_id": "4c59835ae4347d95#frag_0",
+    "chunk_id": "4c59835ae4347d95",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      2
+    ],
+    "section_title": "The story of this course",
+    "text": "The story of this course  Past \u2192 Patterns \u2192 Model \u2192 Forecast"
+  },
+  {
+    "record_id": "775ba026c799a709#frag_0",
+    "chunk_id": "775ba026c799a709",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      3
+    ],
+    "section_title": "Today\u2019s learning outcomes",
+    "text": "Today\u2019s learning outcomes  \u2022 Define a time series correctly \u2022 Explain why time order matters \u2022 Recognize real forecasting problems \u2022 Use notation Y\u209c and forecast horizon \u2022 Separate signal, pattern, an"
+  },
+  {
+    "record_id": "80456935a8ce7a33#frag_0",
+    "chunk_id": "80456935a8ce7a33",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      4
+    ],
+    "section_title": "Motivation: public health forecasting",
+    "text": "Motivation: public health forecasting  Question: Can we prepare beds, staff, and medicine for next week?  Time series helps us turn past weekly values into planned action."
+  },
+  {
+    "record_id": "faa0636d8130f671#frag_0",
+    "chunk_id": "faa0636d8130f671",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      5
+    ],
+    "section_title": "Where do time series appear?",
+    "text": "Where do time series appear?  \u2022 Daily rainfall \u2022 Hourly electricity demand \u2022 Weekly dengue cases \u2022 Monthly sales \u2022 Stock or exchange rates"
+  },
+  {
+    "record_id": "17afea5d75d43e4e#frag_0",
+    "chunk_id": "17afea5d75d43e4e",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      6
+    ],
+    "section_title": "What is a time series?",
+    "text": "What is a time series?  A time series is a set of observations recorded in time order.  Y\u2081, Y\u2082, Y\u2083, \u2026, Y\u209c  The index t tells us WHEN the value was observed."
+  },
+  {
+    "record_id": "8151ba50337c4282#frag_0",
+    "chunk_id": "8151ba50337c4282",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      7
+    ],
+    "section_title": "Not all data are time series",
+    "text": "Not all data are time series  Many units  One unit many times  one time"
+  },
+  {
+    "record_id": "a19667c4cef6525e#frag_0",
+    "chunk_id": "a19667c4cef6525e",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      8
+    ],
+    "section_title": "Why does time order matter?",
+    "text": "Why does time order matter?  Because today may depend on yesterday.  Y\u209c may depend on Y\u209c\u208b\u2081, Y\u209c\u208b\u2082, \u2026  This dependence is the heart of time series analysis."
+  },
+  {
+    "record_id": "194b231574130adf#frag_0",
+    "chunk_id": "194b231574130adf",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      9
+    ],
+    "section_title": "Activity 1: Is it a time series?",
+    "text": "Activity 1: Is it a time series?  Work in pairs. Decide YES or NO.  \u2022 Marks of 40 students in one exam \u2022 Rainfall recorded every month \u2022 Price of one product every week \u2022 Heights of students in this c"
+  },
+  {
+    "record_id": "7270a0ba751fe9c0#frag_0",
+    "chunk_id": "7270a0ba751fe9c0",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      10
+    ],
+    "section_title": "Activity 1: Discussion",
+    "text": "Activity 1: Discussion  \u2022 Exam marks: usually NOT time series \u2022 Monthly rainfall: YES \u2022 Weekly product price: YES \u2022 Student heights: usually NOT \u2022 CPU usage per second: YES  Rule: ask whether time ord"
+  },
+  {
+    "record_id": "f8b6bfa7ecc66d35#frag_0",
+    "chunk_id": "f8b6bfa7ecc66d35",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      11,
+      12
+    ],
+    "section_title": "Observed data",
+    "text": "Observed series vs process  Observed data:  Underlying process: The data-generating mechanism  The values we actually see  Data Science goal: learn enough about the process to forecast future  values."
+  },
+  {
+    "record_id": "e605520fe20cb4e5#frag_0",
+    "chunk_id": "e605520fe20cb4e5",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      12
+    ],
+    "section_title": "indexed by time",
+    "text": "indexed by time:  {Y\u209c : t \u2208T}  A time series is one observed realization of this  process."
+  },
+  {
+    "record_id": "c00a2f57654637b0#frag_0",
+    "chunk_id": "c00a2f57654637b0",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      13
+    ],
+    "section_title": "What patterns can hide inside a series?",
+    "text": "What patterns can hide inside a series?  \u2022 Trend: long-term movement \u2022 Seasonality: repeated calendar pattern \u2022 Cycle: irregular long wave \u2022 Noise: random variation"
+  },
+  {
+    "record_id": "1a03a7138dfb0836#frag_0",
+    "chunk_id": "1a03a7138dfb0836",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      14,
+      15
+    ],
+    "section_title": "Real-world component examples",
+    "text": "Real-world component examples  \u2022 Trend: population grows over years \u2022 Seasonality: sales rise before New Year \u2022 Cycle: economic expansions and recessions \u2022 Noise: one unusual rainy day  A good forecas"
+  },
+  {
+    "record_id": "f0869fb392554f47#frag_0",
+    "chunk_id": "f0869fb392554f47",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      16
+    ],
+    "section_title": "Forecast horizon changes the problem",
+    "text": "Forecast horizon changes the problem  \u2022 Short horizon: next hour \u2022 Medium horizon: next month \u2022 Long horizon: next year \u2022 Longer horizon \u2192 more uncertainty"
+  },
+  {
+    "record_id": "67d853ba50b2e76f#frag_0",
+    "chunk_id": "67d853ba50b2e76f",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      17
+    ],
+    "section_title": "A forecast is not only one number",
+    "text": "A forecast is not only one number  Point forecast: Next week = 120 cases"
+  },
+  {
+    "record_id": "17b04614281c402d#frag_0",
+    "chunk_id": "17b04614281c402d",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      17
+    ],
+    "section_title": "Prediction interval",
+    "text": "Prediction interval:  Likely range = 95 to 150 cases  Decision makers usually need the range, not only the  number."
+  },
+  {
+    "record_id": "6e8111143d0cc93d#frag_0",
+    "chunk_id": "6e8111143d0cc93d",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      18
+    ],
+    "section_title": "Before modelling, check the data",
+    "text": "Before modelling, check the data  \u2022 Is the time interval regular? \u2022 Are values missing? \u2022 Are there outliers? \u2022 Did the definition change? \u2022 Is the series long enough?"
+  },
+  {
+    "record_id": "3ef21f75aa4509ed#frag_0",
+    "chunk_id": "3ef21f75aa4509ed",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      19
+    ],
+    "section_title": "Use this weekly example",
+    "text": "Activity 2: Draw the story  Use this weekly example:  42, 48, 53, 61, 72, 88, 110, 125  \u2022 Draw a time plot \u2022 Describe the pattern \u2022 Guess week 9 \u2022 Explain your reason"
+  },
+  {
+    "record_id": "41358aaf5c1ff383#frag_0",
+    "chunk_id": "41358aaf5c1ff383",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      20
+    ],
+    "section_title": "Activity 2: What did you notice?",
+    "text": "Activity 2: What did you notice?  \u2022 The values are increasing \u2022 The increase is becoming faster \u2022 A straight-line guess may be too small \u2022 A forecast needs both data and judgment  Good forecasting is "
+  },
+  {
+    "record_id": "71127c3b7ef2dad3#frag_0",
+    "chunk_id": "71127c3b7ef2dad3",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      21
+    ],
+    "section_title": "Three early mistakes to avoid",
+    "text": "Three early mistakes to avoid  \u2022 Using time-series data as if independent \u2022 Shuffling past and future randomly \u2022 Trusting software without reading plots  In this course, plots are not optional."
+  },
+  {
+    "record_id": "5b15cf62ac7e61ab#frag_0",
+    "chunk_id": "5b15cf62ac7e61ab",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      22
+    ],
+    "section_title": "Activity 3: Find a time series around you",
+    "text": "Activity 3: Find a time series around you  \u2022 Choose one real-life variable \u2022 State the time interval \u2022 State the decision it supports \u2022 Predict what pattern may appear  Example: daily cafeteria sales "
+  },
+  {
+    "record_id": "5674e07b6d7228f8#frag_0",
+    "chunk_id": "5674e07b6d7228f8",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      23
+    ],
+    "section_title": "Today\u2019s big ideas",
+    "text": "Today\u2019s big ideas  \u2022 Time order carries information \u2022 Y\u209c is a value observed at time t \u2022 Past values may depend on earlier values \u2022 Patterns guide forecasting \u2022 Uncertainty must be respected"
+  },
+  {
+    "record_id": "ace98b82f5f918e6#frag_0",
+    "chunk_id": "ace98b82f5f918e6",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      24
+    ],
+    "section_title": "Answer before you leave",
+    "text": "Exit ticket  Answer before you leave:  \u2022 Give one example of a time series \u2022 Why should we not shuffle it? \u2022 What would you forecast from it?  Next lecture: seeing patterns clearly with plots and  smo"
+  },
+  {
+    "record_id": "cb707ce1d927683c#frag_0",
+    "chunk_id": "cb707ce1d927683c",
+    "source_file": "1. DS5104 Lecture1 Time_Series_Introduction.pdf",
+    "source_pages": [
+      25
+    ],
+    "section_title": "The future is uncertain, but data can make us prepared.",
+    "text": "The future is uncertain, but data can make us prepared.  See you in Lecture 2"
+  },
+  {
+    "record_id": "4cf3e660ff95b0cc#frag_0",
+    "chunk_id": "4cf3e660ff95b0cc",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      1
+    ],
+    "section_title": "DS5104 Lecture 2 Exploring Time Series Data",
+    "text": "DS5104 Lecture 2 Exploring Time Series Data  From a line plot to a data story  anupama@foc.sab.ac.lk"
+  },
+  {
+    "record_id": "0e0dbbd57078a207#frag_0",
+    "chunk_id": "0e0dbbd57078a207",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      2
+    ],
+    "section_title": "Today\u2019s Learning Outcomes",
+    "text": "Today\u2019s Learning Outcomes  By the end, you can: 1 Describe a series using time, value, frequency  2 Identify trend, seasonality, cycle, noise 3 Decide when additive or multiplicative thinking fits 4 E"
+  },
+  {
+    "record_id": "93786ea69e31757b#frag_0",
+    "chunk_id": "93786ea69e31757b",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      2,
+      3
+    ],
+    "section_title": "5 Start a forecasting story from real data",
+    "text": "5 Start a forecasting story from real data  \u201cWhat is the data trying to tell us?\u201d"
+  },
+  {
+    "record_id": "4701fe0accf204fc#frag_0",
+    "chunk_id": "4701fe0accf204fc",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      4
+    ],
+    "section_title": "Real question",
+    "text": "Motivation: Can We Predict Next Week?  Real question:  Will cases rise?  Look for trend, spikes and seasonal timing.  Activity: Predict next week."
+  },
+  {
+    "record_id": "562aaab02f202518#frag_0",
+    "chunk_id": "562aaab02f202518",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      5
+    ],
+    "section_title": "What Is a Time Series?",
+    "text": "What Is a Time Series?  A time series records one variable in time order.  Y\u2081, Y\u2082, Y\u2083, \u2026, Y\u209c  The order is not decoration. The order carries  information.  Example: today\u2019s demand may depend on  yeste"
+  },
+  {
+    "record_id": "c190da6de769e1e7#frag_0",
+    "chunk_id": "c190da6de769e1e7",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      6
+    ],
+    "section_title": "Why Not Treat It Like Ordinary Data?",
+    "text": "Why Not Treat It Like Ordinary Data?  Ordinary data: Independent rows.  Time series data: Future values depend on past values.  Never shuffle time."
+  },
+  {
+    "record_id": "7124cf06c84fe545#frag_0",
+    "chunk_id": "7124cf06c84fe545",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      7
+    ],
+    "section_title": "A plot can reveal",
+    "text": "WHY THIS? Plot First, Model Later  A plot can reveal:  \u2022 Long-term direction  \u2022 Repeating seasonal behaviour  \u2022 Sudden shocks or unusual points  \u2022 Changing variation  Good forecasting begins with good"
+  },
+  {
+    "record_id": "44743f8c607ed718#frag_0",
+    "chunk_id": "44743f8c607ed718",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      8
+    ],
+    "section_title": "Real-World Time Series Are Everywhere",
+    "text": "Real-World Time Series Are Everywhere  Healthcare \u2022 Agriculture \u2022 Energy \u2022 Business \u2022  Transport"
+  },
+  {
+    "record_id": "75ccaf7d6459d4d9#frag_0",
+    "chunk_id": "75ccaf7d6459d4d9",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      9
+    ],
+    "section_title": "Minimum structure",
+    "text": "The Anatomy of a Time Series Dataset  Minimum structure:  Time index \u2192 Value"
+  },
+  {
+    "record_id": "3a9161caea5fde7b#frag_0",
+    "chunk_id": "3a9161caea5fde7b",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      9
+    ],
+    "section_title": "But we also need",
+    "text": "But we also need:  Frequency: hourly, weekly, monthly, yearly  Meaning: what does one observation represent?  Units: cases, rupees, MW, mm, litres"
+  },
+  {
+    "record_id": "c35decddce689838#frag_0",
+    "chunk_id": "c35decddce689838",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      10
+    ],
+    "section_title": "One Series Can Contain Many Stories",
+    "text": "One Series Can Contain Many Stories  Observed value = signal + noise  Signal may include trend, seasonality and cycle.  Noise is what remains unexplained."
+  },
+  {
+    "record_id": "b310276412afcdee#frag_0",
+    "chunk_id": "b310276412afcdee",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      11
+    ],
+    "section_title": "Component 1: Level and Trend",
+    "text": "Component 1: Level and Trend  Level: Usual height.  Trend: Long-term direction.  Activity: Is baseline changing?"
+  },
+  {
+    "record_id": "c69c08dd56546863#frag_0",
+    "chunk_id": "c69c08dd56546863",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      12
+    ],
+    "section_title": "Component 2: Seasonality",
+    "text": "Component 2: Seasonality  Seasonality = fixed repeating calendar pattern. Rainfall often repeats within each year.  Question: What is the period?"
+  },
+  {
+    "record_id": "18a43fbd06b95294#frag_0",
+    "chunk_id": "18a43fbd06b95294",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      13
+    ],
+    "section_title": "Component 3: Cycle",
+    "text": "Component 3: Cycle  Seasonality repeats on a known calendar.  Cycle repeats, but not with exact timing.  Examples:  \u2022 economic expansions and recessions  \u2022 disease waves  \u2022 consumer behaviour cycles"
+  },
+  {
+    "record_id": "6a0d55c048f30ea8#frag_0",
+    "chunk_id": "6a0d55c048f30ea8",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      14
+    ],
+    "section_title": "Component 4: Irregular Variation",
+    "text": "Component 4: Irregular Variation  Not everything is predictable.  Random shocks, recording errors, strikes, storms  and policy changes can disturb the pattern."
+  },
+  {
+    "record_id": "455f9ea2b8955c6e#frag_0",
+    "chunk_id": "455f9ea2b8955c6e",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      14
+    ],
+    "section_title": "A good analyst asks",
+    "text": "A good analyst asks:  \u201cIs this noise, or is this a meaningful event?\u201d"
+  },
+  {
+    "record_id": "cdf26c9fd8dd7a4c#frag_0",
+    "chunk_id": "cdf26c9fd8dd7a4c",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      15
+    ],
+    "section_title": "Additive Structure",
+    "text": "Additive Structure  Use when seasonal size is roughly constant.  Y\u209c = T\u209c + S\u209c + C\u209c + I\u209c  Observed = Trend + Seasonal + Cycle + Irregular  Example: rainfall seasonal swing stays about  similar each yea"
+  },
+  {
+    "record_id": "6ae29b0615e87184#frag_0",
+    "chunk_id": "6ae29b0615e87184",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      16
+    ],
+    "section_title": "Multiplicative Structure",
+    "text": "Multiplicative Structure  Use when seasonal size grows with the level.  Y\u209c = T\u209c \u00d7 S\u209c \u00d7 C\u209c \u00d7 I\u209c  Seasonal effect is proportional to the level.  Example: sales peaks become larger as business  grows."
+  },
+  {
+    "record_id": "1df6344025fcc476#frag_0",
+    "chunk_id": "1df6344025fcc476",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      17
+    ],
+    "section_title": "Activity 1: Additive or Multiplicative?",
+    "text": "Activity 1: Additive or Multiplicative?  Discuss: Why does the log plot look easier to  model?"
+  },
+  {
+    "record_id": "e79d6de72369eb5d#frag_0",
+    "chunk_id": "e79d6de72369eb5d",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      18
+    ],
+    "section_title": "Transformation: Why Log?",
+    "text": "Transformation: Why Log?  When variation increases with the level, modelling raw values becomes difficult.  log(Y\u209c) can stabilize growth and  changing spread.  Data Science idea: transform first, mode"
+  },
+  {
+    "record_id": "0ddfc63d738ae21b#frag_0",
+    "chunk_id": "0ddfc63d738ae21b",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      19
+    ],
+    "section_title": "Time Frequency Matters",
+    "text": "Time Frequency Matters  Hourly \u2192 daily rhythm Weekly \u2192 disease waves Monthly \u2192 yearly pattern  Frequency guides the model."
+  },
+  {
+    "record_id": "42bd48e7b69a2dc2#frag_0",
+    "chunk_id": "42bd48e7b69a2dc2",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      20
+    ],
+    "section_title": "Activity 2: Read the Four Plots",
+    "text": "Activity 2: Read the Four Plots  For A, B, C, D identify:"
+  },
+  {
+    "record_id": "004f31595ecde509#frag_0",
+    "chunk_id": "004f31595ecde509",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      20
+    ],
+    "section_title": "4 best next step?",
+    "text": "1 trend?  2 seasonality?  3 mostly noise?  4 best next step?  Work in pairs: 5 minutes"
+  },
+  {
+    "record_id": "c08e1f132fab6dbc#frag_0",
+    "chunk_id": "c08e1f132fab6dbc",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      21
+    ],
+    "section_title": "Story from plot",
+    "text": "Worked Example: Electricity Demand  Story from plot:  Evening peak.  Daily rhythm.  Time of day matters.  Next: smooth or model?"
+  },
+  {
+    "record_id": "b127020c9912fc01#frag_0",
+    "chunk_id": "b127020c9912fc01",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      22
+    ],
+    "section_title": "Before Forecasting, Ask These Questions",
+    "text": "Before Forecasting, Ask These Questions  What is the time frequency?  Is there trend?  Is there seasonality?  Are there unusual events?  Does variability change with level?  Can the past reasonably in"
+  },
+  {
+    "record_id": "7af2765faf3864a3#frag_0",
+    "chunk_id": "7af2765faf3864a3",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      23
+    ],
+    "section_title": "Choose one real series",
+    "text": "Activity 3: Build a Data Story  Choose one real series:  rainfall, dengue, sales, fuel price, electricity"
+  },
+  {
+    "record_id": "3a9e94fefaac6e74#frag_0",
+    "chunk_id": "3a9e94fefaac6e74",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      23,
+      24
+    ],
+    "section_title": "Common Mistakes to Avoid",
+    "text": "Write three sentences:  1 What is changing?  2 What repeats?  3 What should be forecast carefully?  Common Mistakes to Avoid  Mistake 1: Forecasting without plotting.  Mistake 2: Ignoring time order. "
+  },
+  {
+    "record_id": "2763b896473e0066#frag_0",
+    "chunk_id": "2763b896473e0066",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      25
+    ],
+    "section_title": "Activity Rules: Think Like a Data Scientist",
+    "text": "Activity Rules: Think Like a Data Scientist  1. Do not calculate first. Observe first.  2. Describe what is changing over time.  3. Mark components on the graph.  4. Give a real-world reason.  Work in"
+  },
+  {
+    "record_id": "8ea84d608a47eec7#frag_0",
+    "chunk_id": "8ea84d608a47eec7",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      26
+    ],
+    "section_title": "Quick Reminder: What Are We Looking For?",
+    "text": "Quick Reminder: What Are We Looking For?  Trend Long-term upward or downward movement  Seasonal Repeated pattern with fixed calendar timing  Cycle Long wave, not perfectly fixed in timing  Irregular R"
+  },
+  {
+    "record_id": "667c3ea73ef8ee1f#frag_0",
+    "chunk_id": "667c3ea73ef8ee1f",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      27
+    ],
+    "section_title": "Activity 4: Monthly Retail Sales",
+    "text": "Activity 4: Monthly Retail Sales  Question: What components do you see in this retail series?"
+  },
+  {
+    "record_id": "cca19bc6a9884cae#frag_0",
+    "chunk_id": "cca19bc6a9884cae",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      28
+    ],
+    "section_title": "Activity 4: Group Task",
+    "text": "Activity 4: Group Task  A. Is there a trend? Describe it.  B. Is there seasonality? Where?  C. Are there unusual points?  D. Give one real-world reason.  Student output: 4 sentences + one marked graph"
+  },
+  {
+    "record_id": "7e292a705ff3b704#frag_0",
+    "chunk_id": "7e292a705ff3b704",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      29
+    ],
+    "section_title": "Activity 4: Discussion Guide",
+    "text": "Activity 4: Discussion Guide  Story: Sales grow upward. Peaks repeat yearly.  Irregular: Random jumps may come from promotions or supply issues."
+  },
+  {
+    "record_id": "18937119beea645f#frag_0",
+    "chunk_id": "18937119beea645f",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      30
+    ],
+    "section_title": "Activity 5: Weekly Dengue Cases",
+    "text": "Activity 5: Weekly Dengue Cases  Question: Which changes are seasonal, and which look unusual?"
+  },
+  {
+    "record_id": "1850572182ef40f2#frag_0",
+    "chunk_id": "1850572182ef40f2",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      31
+    ],
+    "section_title": "Activity 5: Group Task",
+    "text": "Activity 5: Group Task  A. Identify the low-case period.  B. Identify the build-up period.  C. Mark the outbreak spike.  D. What would you forecast next?  Student output: one health-department warning"
+  },
+  {
+    "record_id": "09cea5dfa3244ccb#frag_0",
+    "chunk_id": "09cea5dfa3244ccb",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      32
+    ],
+    "section_title": "Activity 2: Discussion Guide",
+    "text": "Activity 2: Discussion Guide  Story: Cases rise seasonally, then show an outbreak spike.  Use: Plan beds, fogging, awareness, and staff."
+  },
+  {
+    "record_id": "1a3e3dda3c52a883#frag_0",
+    "chunk_id": "1a3e3dda3c52a883",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      33
+    ],
+    "section_title": "Final Reflection: The Data Has a Story",
+    "text": "Final Reflection: The Data Has a Story  Before modelling, ask: what is the series trying to tell us?  Trend = direction. Seasonality = timing. Cycle = waves. Irregular = surprises."
+  },
+  {
+    "record_id": "681e609d6cd90689#frag_0",
+    "chunk_id": "681e609d6cd90689",
+    "source_file": "2. DS5104 Lecture2 Exploratory_Time_Series_Analysis.pdf",
+    "source_pages": [
+      34
+    ],
+    "section_title": "The Story So Far",
+    "text": "The Story So Far  A time series is not just numbers.  It is a story written in time.  Today we learned to read the story.  Next: smoothing the noise to reveal the signal.  smoothing methods help us se"
+  },
+  {
+    "record_id": "f9404b0afc6eb5ae#frag_0",
+    "chunk_id": "f9404b0afc6eb5ae",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      1
+    ],
+    "section_title": null,
+    "text": "DS5104 Time Series Analysis and Forecasting Lecture 3 Smoothing Methods I  Moving Averages, Noise, and the Hidden Story in Data  Motivation: \u201cCan we see the real pattern beneath daily ups and downs?\u201d"
+  },
+  {
+    "record_id": "a5e570c752abc51a#frag_0",
+    "chunk_id": "a5e570c752abc51a",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      2,
+      3
+    ],
+    "section_title": "Today\u2019s story",
+    "text": "Today\u2019s story  1. Why raw time series are hard to read 2. What smoothing means 3. Simple moving average 4. Centered moving average 5. Weighted moving average 6. When smoothing helps \u2014 and fails  Activ"
+  },
+  {
+    "record_id": "ba2ce86e263bc2b1#frag_0",
+    "chunk_id": "ba2ce86e263bc2b1",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      4
+    ],
+    "section_title": "Motivation problem",
+    "text": "Motivation problem  A hospital manager sees dengue visits going up and down every day.  Question: Is the disease situation really increasing, or is it just daily noise?"
+  },
+  {
+    "record_id": "483f11d685a7a61d#frag_0",
+    "chunk_id": "483f11d685a7a61d",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      5
+    ],
+    "section_title": "Real-world data contains",
+    "text": "WHY THIS?  Real-world data contains:  Smoothing helps us see the underlying movement  \u2022 Measurement error \u2022 Random daily shocks \u2022 Calendar effects \u2022 True trend \u2022 Sudden events  But smoothing is NOT ma"
+  },
+  {
+    "record_id": "c2e9d9ee70aa7089#frag_0",
+    "chunk_id": "c2e9d9ee70aa7089",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      6,
+      7
+    ],
+    "section_title": "The main idea",
+    "text": "The main idea  Observed series = Signal + Noise  Y\u209c = Pattern\u209c + Random variation\u209c  Smoothing tries to estimate the signal.  Then we can ask better questions about trend, seasonality and future  value"
+  },
+  {
+    "record_id": "b08d96cc54c2d638#frag_0",
+    "chunk_id": "b08d96cc54c2d638",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      7
+    ],
+    "section_title": "For a 3-period moving average",
+    "text": "For a 3-period moving average:  MA\u209c = (Y\u209c + Y\u209c\u208b\u2081 + Y\u209c\u208b\u2082) / 3  Meaning: today\u2019s smoothed value uses today and the previous  two observations.  This is called a trailing moving average."
+  },
+  {
+    "record_id": "3ef7a2ea42b47b33#frag_0",
+    "chunk_id": "3ef7a2ea42b47b33",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      8
+    ],
+    "section_title": "Worked example: hospital visits",
+    "text": "Worked example: hospital visits  Week Visits 3-week MA  1 54 \u2014 2 50 \u2014 3 57 (54+50+57)/3 = 53.7 4 63 (50+57+63)/3 = 56.7  Interpretation: Week 4 looks higher, but the smoothed value tells us the averag"
+  },
+  {
+    "record_id": "0c88c0860238d3d2#frag_0",
+    "chunk_id": "0c88c0860238d3d2",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      9
+    ],
+    "section_title": "Activity 1: Your turn",
+    "text": "Activity 1: Your turn  Use the data: 54, 50, 57, 63, 60, 68, 77, 72  Task A: Calculate the 3-week moving average for Weeks 5\u20138. Task B: Which week shows a real increase, not just one high value?  Task"
+  },
+  {
+    "record_id": "b34afa82d0287ec2#frag_0",
+    "chunk_id": "b34afa82d0287ec2",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      10
+    ],
+    "section_title": "What smoothing does visually",
+    "text": "What smoothing does visually  The moving average removes small jumps and highlights the outbreak shape."
+  },
+  {
+    "record_id": "f3488b7cbd42a9b0#frag_0",
+    "chunk_id": "f3488b7cbd42a9b0",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      11
+    ],
+    "section_title": "WHEN do we use moving averages?",
+    "text": "WHEN do we use moving averages?  Good uses  Weak uses  \u2022 Sales trend \u2022 Disease pattern \u2022 Rainfall shape \u2022 Electricity demand \u2022 Website traffic  \u2022 Sudden accidents \u2022 Policy changes \u2022 Crisis detection \u2022"
+  },
+  {
+    "record_id": "392f94c4d8cf49f0#frag_0",
+    "chunk_id": "392f94c4d8cf49f0",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      12
+    ],
+    "section_title": "Large window",
+    "text": "HOW: Choose a window size  Small window  Large window  Medium window  Balanced Often practical  Very smooth Slow to react  More responsive  Less smooth  Rule: choose the window according to the decisi"
+  },
+  {
+    "record_id": "7f3fa9f74625abd1#frag_0",
+    "chunk_id": "7f3fa9f74625abd1",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      13
+    ],
+    "section_title": "Window size experiment",
+    "text": "Window size experiment  Question: Which curve would you use for public-health planning?"
+  },
+  {
+    "record_id": "59181ec73a9b2d14#frag_0",
+    "chunk_id": "59181ec73a9b2d14",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      14,
+      15
+    ],
+    "section_title": "Activity 2: Window debate",
+    "text": "Activity 2: Window debate  Scenario: A dengue control team needs to decide whether to send field officers next week.  Group A: defend 3-day MA.  Group B: defend 7-day MA.  Group C: defend 14-day MA.  "
+  },
+  {
+    "record_id": "0b17747940c03c35#frag_0",
+    "chunk_id": "0b17747940c03c35",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      15
+    ],
+    "section_title": "For a 3-period centered moving average",
+    "text": "For a 3-period centered moving average:  CMA\u209c = (Y\u209c\u208b\u2081 + Y\u209c + Y\u209c\u208a\u2081) / 3  Use it to describe the past, because it needs future observations.  Important: centered MA cannot be used directly for real-  ti"
+  },
+  {
+    "record_id": "ca2b03fff3f0b738#frag_0",
+    "chunk_id": "ca2b03fff3f0b738",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      16
+    ],
+    "section_title": "Trailing vs centered MA",
+    "text": "Trailing vs centered MA  Trailing MA  Centered MA  Uses current and past  Uses past, current, and  values. Good for dashboards and  future values. Good for decomposition  current monitoring.  and hist"
+  },
+  {
+    "record_id": "febf0688dfa57ddc#frag_0",
+    "chunk_id": "febf0688dfa57ddc",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      17,
+      18
+    ],
+    "section_title": "Activity 3: Retail manager decision",
+    "text": "Real-world example: retail sales  Activity 3: Retail manager decision  You manage a supermarket. Daily sales jump every weekend.  Question 1: Should you order stock using raw daily sales?  Question 2:"
+  },
+  {
+    "record_id": "03be41a50e5c0793#frag_0",
+    "chunk_id": "03be41a50e5c0793",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      19
+    ],
+    "section_title": "Example with 3 most recent values",
+    "text": "Weighted moving average  Example with 3 most recent values:  WMA\u209c = 0.5Y\u209c + 0.3Y\u209c\u208b\u2081 + 0.2Y\u209c\u208b\u2082  The weights must add to 1.  Why? Because the result remains on the same scale as the  original data."
+  },
+  {
+    "record_id": "aa987967fa80b620#frag_0",
+    "chunk_id": "aa987967fa80b620",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      20
+    ],
+    "section_title": "Weighted MA in action",
+    "text": "Weighted MA in action  When recent observations matter more, equal weights may be too slow."
+  },
+  {
+    "record_id": "60fb426fdb4ac1eb#frag_0",
+    "chunk_id": "60fb426fdb4ac1eb",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      21
+    ],
+    "section_title": "Activity 4: Design your own weights",
+    "text": "Activity 4: Design your own weights  Forecast next week\u2019s demand using the last 3 weeks: 68, 77, 72.  Team 1: Use equal weights.  Team 2: Use 0.5, 0.3, 0.2.  Team 3: Create your own weights.  Defend y"
+  },
+  {
+    "record_id": "6667c4702d2e9f8e#frag_0",
+    "chunk_id": "6667c4702d2e9f8e",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      22
+    ],
+    "section_title": "General form",
+    "text": "Theory: smoothing as a linear filter  General form:  S\u209c = a\u2080Y\u209c + a\u2081Y\u209c\u208b\u2081 + a\u2082Y\u209c\u208b\u2082 + \u22ef  where the weights usually add to 1.  Simple MA is the special case where all included weights are  equal."
+  },
+  {
+    "record_id": "470003f0c2098a45#frag_0",
+    "chunk_id": "470003f0c2098a45",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      23
+    ],
+    "section_title": "Real-world example: rainfall",
+    "text": "Real-world example: rainfall  Planning question: Which months need irrigation preparation?"
+  },
+  {
+    "record_id": "e226d64576cabab6#frag_0",
+    "chunk_id": "e226d64576cabab6",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      24
+    ],
+    "section_title": "Activity 5: Rainfall story",
+    "text": "Activity 5: Rainfall story  Look at the rainfall chart."
+  },
+  {
+    "record_id": "b08abe7f37cdbfed#frag_0",
+    "chunk_id": "b08abe7f37cdbfed",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      24,
+      25,
+      26
+    ],
+    "section_title": "4. Explain one danger of smoothing rainfall data.",
+    "text": "1. Identify the seasonal pattern.  2. Find one possible extreme rainfall month.  3. Explain why smoothing helps farmers.  4. Explain one danger of smoothing rainfall data.  Share with the class  Why T"
+  },
+  {
+    "record_id": "3e1ece42d638ab3a#frag_0",
+    "chunk_id": "3e1ece42d638ab3a",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      26,
+      27,
+      28
+    ],
+    "section_title": "4. Explain one danger of smoothing rainfall data.",
+    "text": "| Day | Sales | | --- | --- | | Mon | 80 | | Tue | 95 | | Wed | 100 | | Thu | 110 | | Fri | 120 | | Sat | 150 | | Sun | 130 |  Task: Find the 3-day  MA for Tue to Sat.  Explain: What did smoothing rem"
+  },
+  {
+    "record_id": "338337b16d27b3df#frag_0",
+    "chunk_id": "338337b16d27b3df",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      28,
+      29,
+      30
+    ],
+    "section_title": "4. Explain one danger of smoothing rainfall data.",
+    "text": "| Day | 3-day MA | | --- | --- | | Tue | 91.7 | | Wed | 101.7 | | Thu | 110.0 | | Fri | 126.7 | | Sat | 133.3 |  Interpretation: Sales generally increased, but  smoothing reduced daily  jumps.  Discus"
+  },
+  {
+    "record_id": "e9285418782c3cf7#frag_0",
+    "chunk_id": "e9285418782c3cf7",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      30,
+      31,
+      32
+    ],
+    "section_title": "4. Explain one danger of smoothing rainfall data.",
+    "text": "Activity 2: Centered Moving Average  Real example: Quarterly ice-cream sales  Quarter Sales Q1 180 Q2 220 Q3 300 Q4 260 Q5 200 Q6 250 Q7 330 Q8 290  Task A: Calculate each 4-  | Quarter | Sales | | --"
+  },
+  {
+    "record_id": "e9285418782c3cf7#frag_1",
+    "chunk_id": "e9285418782c3cf7",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      30,
+      31,
+      32
+    ],
+    "section_title": "4. Explain one danger of smoothing rainfall data.",
+    "text": "Activity 2: Centered Moving Average (continued)  CMA Workspace Step 1  Calculate the 4-quarter moving averages  4-MA1 = (180+220+300+260)/4 = ______  4-MA2 = (220+300+260+200)/4 = ______  4-MA3 = (300"
+  },
+  {
+    "record_id": "e9285418782c3cf7#frag_2",
+    "chunk_id": "e9285418782c3cf7",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      30,
+      31,
+      32
+    ],
+    "section_title": "4. Explain one danger of smoothing rainfall data.",
+    "text": "Activity 2: Centered Moving Average (continued)  CMA Workspace Step 2  Now center the averages  CMA at Q3 = (4-MA1 + 4-MA2) / 2 = ______  CMA at Q4 = (4-MA2 + 4-MA3) / 2 = ______"
+  },
+  {
+    "record_id": "2328a99ea8346b65#frag_0",
+    "chunk_id": "2328a99ea8346b65",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      32,
+      33
+    ],
+    "section_title": "4. Explain one danger of smoothing rainfall data.",
+    "text": "CMA at Q5 = (4-MA3 + 4-MA4) / 2 = ______  CMA at Q6 = (4-MA4 + 4-MA5) / 2 = ______  CMA Answer Check  Check both steps  4-MA Value 1 240.0 2 245.0 3 252.5 4 260.0 5 267.5"
+  },
+  {
+    "record_id": "d946a83f96643478#frag_0",
+    "chunk_id": "d946a83f96643478",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      33,
+      34,
+      35
+    ],
+    "section_title": "4. Explain one danger of smoothing rainfall data.",
+    "text": "| 4-MA | Value | | --- | --- | | 1 | 240.0 | | 2 | 245.0 | | 3 | 252.5 | | 4 | 260.0 | | 5 | 267.5 |  | Quarter | CMA | | --- | --- | | Q3 | 242.5 | | Q4 | 248.8 | | Q5 | 256.3 | | Q6 | 263.8 |  Quart"
+  },
+  {
+    "record_id": "d44157684c51901d#frag_0",
+    "chunk_id": "d44157684c51901d",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      35,
+      36,
+      37
+    ],
+    "section_title": "4. Explain one danger of smoothing rainfall data.",
+    "text": "Activity 3: Weighted Moving Average  Real example: Emergency visits  Week Visits 1 45 2 50 3 60 4 58 5 70 6 68  | Week | Visits | | --- | --- | | 1 | 45 | | 2 | 50 | | 3 | 60 | | 4 | 58 | | 5 | 70 | |"
+  },
+  {
+    "record_id": "f79817fa9c389a4f#frag_0",
+    "chunk_id": "f79817fa9c389a4f",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      37,
+      38,
+      39
+    ],
+    "section_title": "4. Explain one danger of smoothing rainfall data.",
+    "text": "| Forecast | Value | | --- | --- | | F4 | 54.0 | | F5 | 57.0 | | F6 | 64.4 | | F7 | 66.6 |  F4 54.0 F5 57.0  Week 4?  Answer: Week 6 has the largest weight: 0.5.  F6 64.4 F7 66.6  Challenge Activity  "
+  },
+  {
+    "record_id": "3f9132d3a1657a67#frag_0",
+    "chunk_id": "3f9132d3a1657a67",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      39,
+      40
+    ],
+    "section_title": "3. Why can WMA be better than MA?",
+    "text": "Answer these in 3 minutes:  1. Why do we smooth a time series?  2. When do we use CMA?  3. Why can WMA be better than MA?  Smoothing is not the final answer.  It is the first lens we use to see patter"
+  },
+  {
+    "record_id": "061048e64ea18810#frag_0",
+    "chunk_id": "061048e64ea18810",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      41
+    ],
+    "section_title": "Moving averages can",
+    "text": "Limitations of moving averages  Moving averages can:  \u2022 Delay detection of turning points \u2022 Hide sudden outbreaks or shocks \u2022 Lose observations at the beginning or end \u2022 Depend heavily on chosen windo"
+  },
+  {
+    "record_id": "dbf68d92b3be5e50#frag_0",
+    "chunk_id": "dbf68d92b3be5e50",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      42
+    ],
+    "section_title": "Common mistake",
+    "text": "Common mistake  \u201cThe smoothed line is the truth.\u201d  No. It is an estimate of the underlying pattern.  Always compare the raw series and the smoothed series."
+  },
+  {
+    "record_id": "7e375874b17bf42a#frag_0",
+    "chunk_id": "7e375874b17bf42a",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      43
+    ],
+    "section_title": "How this fits the whole course",
+    "text": "How this fits the whole course  Exploratory plot Smoothing Decomposition ARIMA later  Today we learned how to reduce noise before asking deeper questions about dependence and  forecasting.  Next: smoo"
+  },
+  {
+    "record_id": "3806d44ddb8f6a95#frag_0",
+    "chunk_id": "3806d44ddb8f6a95",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      44
+    ],
+    "section_title": "3. Give one real-world case where smoothing may be dangerous.",
+    "text": "Exit ticket  Answer these three questions:  1. Why do we smooth a time series?  2. What is the difference between 3-day and 14-day MA?  3. Give one real-world case where smoothing may be dangerous.  S"
+  },
+  {
+    "record_id": "2db36385bd914d21#frag_0",
+    "chunk_id": "2db36385bd914d21",
+    "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "source_pages": [
+      45
+    ],
+    "section_title": "Final motivation",
+    "text": "Final motivation  A noisy series is not a messy story.  It is a story waiting for the right lens.  Smoothing is our first lens.  Next lecture: Exponential Smoothing"
+  },
+  {
+    "record_id": "2da3fc7e534f8b2d#frag_0",
+    "chunk_id": "2da3fc7e534f8b2d",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      1
+    ],
+    "section_title": "LECTURE 4 Simple Exponential Smoothing (SES)",
+    "text": "LECTURE 4 Simple Exponential Smoothing (SES)  DS5104 | Time Series Analysis & Forecasting  S\u209c = \u03b1Y\u209c + (1\u2212\u03b1)S\u209c\u208b\u2081  From noisy demand to a forecast  anupama@foc.sab.ac.lk"
+  },
+  {
+    "record_id": "54f84999ae15a9b4#frag_0",
+    "chunk_id": "54f84999ae15a9b4",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      2
+    ],
+    "section_title": "THE STORY BEGINS",
+    "text": "THE STORY BEGINS  A supermarket manager must order tomorrow\u2019s milk today  Yesterday: 120 cartons  Your 2-minute prediction  Write ONE number.  Today: 150 cartons  Write WHY you chose it.  Last week va"
+  },
+  {
+    "record_id": "8c4beb5ae90b8ceb#frag_0",
+    "chunk_id": "8c4beb5ae90b8ceb",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      3
+    ],
+    "section_title": "FROM LECTURE 3 TO LECTURE 4",
+    "text": "FROM LECTURE 3 TO LECTURE 4  Moving averages smooth\u2014but they have costs  MA gives equal weight to selected observations.  QUESTION Can every past observation matter\u2026  WMA lets us choose unequal weight"
+  },
+  {
+    "record_id": "d4e5ed7a03115bd2#frag_0",
+    "chunk_id": "d4e5ed7a03115bd2",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      3
+    ],
+    "section_title": "MORE?",
+    "text": "MORE?  That idea leads to  SES.  DS5104 \u2022 Lecture 4 3"
+  },
+  {
+    "record_id": "b855698c07e9948e#frag_0",
+    "chunk_id": "b855698c07e9948e",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      4
+    ],
+    "section_title": "WHY DO WE NEED SES?",
+    "text": "WHY DO WE NEED SES?  A forecasting method should learn continuously  Real data arrive one observation at a time.  SES gives us  ONE level ONE parameter \u03b1 ONE-step updating  Recent values usually deser"
+  },
+  {
+    "record_id": "f8c6d481744d2ecd#frag_0",
+    "chunk_id": "f8c6d481744d2ecd",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      5
+    ],
+    "section_title": "WHEN SHOULD SES BE USED?",
+    "text": "WHEN SHOULD SES BE USED?  The data structure matters"
+  },
+  {
+    "record_id": "7804a9d5f146aa0b#frag_0",
+    "chunk_id": "7804a9d5f146aa0b",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      5
+    ],
+    "section_title": "POOR CHOICE",
+    "text": "GOOD CHOICE  POOR CHOICE  No strong trend  Strong upward/downward trend  No strong seasonality  Clear repeated seasonality  Level changes slowly  Short-term forecasting  Structural breaks dominate  La"
+  },
+  {
+    "record_id": "16a82ec38f734fe8#frag_0",
+    "chunk_id": "16a82ec38f734fe8",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      6
+    ],
+    "section_title": "WHAT IS \u201cSMOOTHING\u201d?",
+    "text": "WHAT IS \u201cSMOOTHING\u201d?  Separate the underlying level from short-term noise  Observed value  = Level + Noise  Smoothing estimates the  level.  6"
+  },
+  {
+    "record_id": "1a71a9327db35525#frag_0",
+    "chunk_id": "1a71a9327db35525",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      7
+    ],
+    "section_title": "THE SES EQUATION",
+    "text": "THE SES EQUATION  The new level is a weighted compromise  S\u209c = \u03b1Y\u209c + (1\u2212\u03b1)S\u209c\u208b\u2081  \u03b1 = smoothing parameter, 0 < \u03b1 < 1  Y\u209c = current observation  S\u209c\u208b\u2081 = previous smoothed level  1\u2212\u03b1 = weight on the past l"
+  },
+  {
+    "record_id": "df4d7853ac6b2a18#frag_0",
+    "chunk_id": "df4d7853ac6b2a18",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      8
+    ],
+    "section_title": "WHAT DOES \u03b1 REALLY DO?",
+    "text": "WHAT DOES \u03b1 REALLY DO?  \u03b1 controls how fast the method reacts  Small \u03b1 Stable \u2022 slow  reaction  Large \u03b1 Responsive \u2022  less smooth  8"
+  },
+  {
+    "record_id": "c00f99f1fddd55e4#frag_0",
+    "chunk_id": "c00f99f1fddd55e4",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      9
+    ],
+    "section_title": "WHY IS IT CALLED \u201cEXPONENTIAL\u201d?",
+    "text": "WHY IS IT CALLED \u201cEXPONENTIAL\u201d?  Unfold the recursion  S\u209c = \u03b1Y\u209c + (1\u2212\u03b1)S\u209c\u208b\u2081  S\u209c\u208b\u2081 = \u03b1Y\u209c\u208b\u2081 + (1\u2212\u03b1)S\u209c\u208b\u2082  Therefore:  S\u209c = \u03b1Y\u209c + \u03b1(1\u2212\u03b1)Y\u209c\u208b\u2081 + \u03b1(1\u2212\u03b1)\u00b2Y\u209c\u208b\u2082 + \u2026  Older observations receive exponentially  de"
+  },
+  {
+    "record_id": "000984b9ac036602#frag_0",
+    "chunk_id": "000984b9ac036602",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      10
+    ],
+    "section_title": "5 minutes \u2022 pairs",
+    "text": "ACTIVITY 1 \u2014 FEEL THE WEIGHTS  5 minutes \u2022 pairs  Let \u03b1 = 0.4"
+  },
+  {
+    "record_id": "e9080a7028c02f89#frag_0",
+    "chunk_id": "e9080a7028c02f89",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      10
+    ],
+    "section_title": "Compute the first four observation weights",
+    "text": "Compute the first four observation weights:  \u03b1, \u03b1(1\u2212\u03b1), \u03b1(1\u2212\u03b1)\u00b2, \u03b1(1\u2212\u03b1)\u00b3  Then answer: Why does the recent past matter  more? Bonus: What changes if \u03b1 = 0.8?  10"
+  },
+  {
+    "record_id": "ecab6d80023a3258#frag_0",
+    "chunk_id": "ecab6d80023a3258",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      11
+    ],
+    "section_title": "HOW DO WE START?",
+    "text": "HOW DO WE START?  SES needs an initial level  Common simple choice: S\u2081 = Y\u2081  Example  Y\u2081 = 100  Alternative: average of the first few observations  Set S\u2081 = 100  Software may estimate the initial leve"
+  },
+  {
+    "record_id": "82cafee69eff2de1#frag_0",
+    "chunk_id": "82cafee69eff2de1",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      12
+    ],
+    "section_title": "WORKED EXAMPLE \u2014 MONTHLY DEMAND",
+    "text": "WORKED EXAMPLE \u2014 MONTHLY DEMAND  Calculate SES step by step  Observed demand: 100, 110, 108, 120, 117 Use \u03b1 = 0.30 and S\u2081 = 100  S\u2082 = 0.30(110) + 0.70(100) = 103.0  S\u2083 = 0.30(108) + 0.70(103) = 104.5 "
+  },
+  {
+    "record_id": "c75eb893fa070f79#frag_0",
+    "chunk_id": "c75eb893fa070f79",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      13
+    ],
+    "section_title": "FROM SMOOTHING TO FORECASTING",
+    "text": "FROM SMOOTHING TO FORECASTING  The current level becomes the next forecast  Forecast for next period: \u0176\u209c\u208a\u2081|\u209c = S\u209c  After observing period t, our best SES estimate of the next value is the current leve"
+  },
+  {
+    "record_id": "951a38b1e9e05cb2#frag_0",
+    "chunk_id": "951a38b1e9e05cb2",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      14
+    ],
+    "section_title": "WHAT ABOUT 2, 3, OR 5 STEPS AHEAD?",
+    "text": "WHAT ABOUT 2, 3, OR 5 STEPS AHEAD?  SES has no trend term  For h \u2265 1  \u0176\u209c\u208a\u2095|\u209c = S\u209c  So SES gives a flat  forecast  path.  DS5104 \u2022 Lecture 4 14"
+  },
+  {
+    "record_id": "432befce07a6432f#frag_0",
+    "chunk_id": "432befce07a6432f",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      15
+    ],
+    "section_title": "8 minutes \u2022 individual first, then compare",
+    "text": "ACTIVITY 2 \u2014 CALCULATE SES  8 minutes \u2022 individual first, then compare  Weekly clinic visits: 50, 55, 54, 60, 58, 63  Your tasks Calculate S\u2082 to S\u2086. Forecast Week 7. Explain what \u03b1 = 0.40 means.  Use "
+  },
+  {
+    "record_id": "e5f370c8f3541ebe#frag_0",
+    "chunk_id": "e5f370c8f3541ebe",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      16,
+      17
+    ],
+    "section_title": "ACTIVITY 2 \u2014 CHECK YOUR WORK",
+    "text": "ACTIVITY 2 \u2014 CHECK YOUR WORK  One possible solution  Smoothed levels:  50.00, 52.00, 52.80, 55.68, 56.61, 59.16  Week 7 forecast = S\u2086 = 59.16  Interpretation: 40% weight goes to the newest  observatio"
+  },
+  {
+    "record_id": "2c6fc7699f04aab8#frag_0",
+    "chunk_id": "2c6fc7699f04aab8",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      18
+    ],
+    "section_title": "MEASURING ACCURACY",
+    "text": "MEASURING ACCURACY  Different loss functions punish errors differently  MAE  MSE"
+  },
+  {
+    "record_id": "7bcdd909a9a4d4ac#frag_0",
+    "chunk_id": "7bcdd909a9a4d4ac",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      18
+    ],
+    "section_title": "RMSE",
+    "text": "RMSE  MAE = mean(|e\u209c|)  MSE = mean(e\u209c\u00b2)  RMSE =  \u221aMSE Back in original units  Easy to interpret  Penalizes large errors  DS5104 \u2022 1"
+  },
+  {
+    "record_id": "922c92c23ef6f0b1#frag_0",
+    "chunk_id": "922c92c23ef6f0b1",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      19
+    ],
+    "section_title": "HOW SHOULD WE CHOOSE \u03b1?",
+    "text": "HOW SHOULD WE CHOOSE \u03b1?  Not by guessing alone  Common principle  Choose \u03b1 that  minimizes an  in-sample forecast error  measure.  Then validate  on future  data.  DS5104 \u2022 Lecture 4 19"
+  },
+  {
+    "record_id": "93292b77b0bb2793#frag_0",
+    "chunk_id": "93292b77b0bb2793",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      20
+    ],
+    "section_title": "ACTIVITY 3 \u2014 WHAT SHOULD \u03b1 DO?",
+    "text": "ACTIVITY 3 \u2014 WHAT SHOULD \u03b1 DO?  Think before calculating  Discuss Which \u03b1 reacts faster?  Which \u03b1 is more robust to a one-time shock?  What if the change is permanent?  20"
+  },
+  {
+    "record_id": "8933e9cdfb78f1bb#frag_0",
+    "chunk_id": "8933e9cdfb78f1bb",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      21
+    ],
+    "section_title": "EXTREME VALUES OF \u03b1",
+    "text": "EXTREME VALUES OF \u03b1  The limits reveal the logic  \u03b1 \u21921 S\u209c \u2248 Y\u209c  \u03b1 \u21920 S\u209c \u2248 S\u209c\u208b\u2081  Almost no  Very heavy  smoothing  smoothing  DS5104 \u2022 Lecture 4 21"
+  },
+  {
+    "record_id": "99adcedf12661066#frag_0",
+    "chunk_id": "99adcedf12661066",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      22
+    ],
+    "section_title": "SES vs MA vs WMA",
+    "text": "SES vs MA vs WMA  Same goal\u2014different memory  MA  WMA  SES  Fixed window  Fixed window Chosen weights  Infinite memory Exponential  Equal weights  weights  Key idea: SES never suddenly \u201cdrops\u201d an old "
+  },
+  {
+    "record_id": "e810dab9889c5724#frag_0",
+    "chunk_id": "e810dab9889c5724",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      23
+    ],
+    "section_title": "6 minutes \u2022 groups",
+    "text": "ACTIVITY 4 \u2014 CHOOSE THE METHOD  6 minutes \u2022 groups  For each case, choose MA, WMA, or SES\u2014and justify  WHY.  A pharmacy tracks daily sales of a stable medicine.  A caf\u00e9 wants recent weekends to matter"
+  },
+  {
+    "record_id": "21083463076a7b3c#frag_0",
+    "chunk_id": "21083463076a7b3c",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      24
+    ],
+    "section_title": "WHEN SES FAILS",
+    "text": "WHEN SES FAILS  A model can be simple and still be wrong  Trend \u2192SES forecasts lag behind.  Seasonality \u2192SES ignores repeating seasonal structure.  Structural break \u2192old information may mislead.  Larg"
+  },
+  {
+    "record_id": "1204d4d4d67766c2#frag_0",
+    "chunk_id": "1204d4d4d67766c2",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      25
+    ],
+    "section_title": "MINI CASE \u2014 DENGUE SURVEILLANCE",
+    "text": "MINI CASE \u2014 DENGUE SURVEILLANCE  Should we smooth weekly case counts?  Suppose weekly cases are: 72, 75, 73, 78, 76, 80 Task: compute SES with"
+  },
+  {
+    "record_id": "7287b704642793f8#frag_0",
+    "chunk_id": "7287b704642793f8",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      25
+    ],
+    "section_title": "Then ask",
+    "text": "Then ask:  Is there evidence of trend?  Could seasonality matter for dengue?  \u03b1 = 0.25 and forecast  next week.  Would SES be enough for longer horizons?  DS5104 \u2022 Lecture 4 25"
+  },
+  {
+    "record_id": "7e06e913cb505fce#frag_0",
+    "chunk_id": "7e06e913cb505fce",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      26
+    ],
+    "section_title": "BACK TO THE SUPERMARKET",
+    "text": "BACK TO THE SUPERMARKET  Now revisit your first prediction  If yesterday = 120 and today = 150\u2026"
+  },
+  {
+    "record_id": "bf4a9c91209b57ba#frag_0",
+    "chunk_id": "bf4a9c91209b57ba",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      26
+    ],
+    "section_title": "With \u03b1 = 0.30 and previous level S\u209c\u208b\u2081 = 125",
+    "text": "With \u03b1 = 0.30 and previous level S\u209c\u208b\u2081 = 125:  S\u209c = 0.30(150) + 0.70(125) = 132.5  Tomorrow\u2019s SES forecast = 132.5 cartons  Did your first answer use a similar idea\u2014explicitly or  intuitively?  DS5104 "
+  },
+  {
+    "record_id": "ca41024e6aa92864#frag_0",
+    "chunk_id": "ca41024e6aa92864",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      27
+    ],
+    "section_title": "3 minutes \u2022 submit before leaving",
+    "text": "EXIT TICKET  3 minutes \u2022 submit before leaving  1. In one sentence: WHY do we use SES? 2. What does a large \u03b1 mean? 3. Compute one SES update: Y\u209c=90, S\u209c\u208b\u2081=80, \u03b1=0.4. 4. Give one situation where SES sh"
+  },
+  {
+    "record_id": "74a35b976c838a54#frag_0",
+    "chunk_id": "74a35b976c838a54",
+    "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "source_pages": [
+      28
+    ],
+    "section_title": "THE STORY CONTINUES",
+    "text": "THE STORY CONTINUES  SES learned the level. But what if the series is climbing\u2014or repeats every year?  SES assumes \u201clevel only.\u201d  Real time series often contain TREND and  SEASONALITY.  Next: Trend & "
+  },
+  {
+    "record_id": "7677cd7f3a2893d6#frag_0",
+    "chunk_id": "7677cd7f3a2893d6",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      1
+    ],
+    "section_title": null,
+    "text": "DS5104 \u2022 Lecture 5  Trend & Seasonal Modelling  The story hidden inside time series  DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sab.ac.lk \u2022 Slide 1"
+  },
+  {
+    "record_id": "3efcd90e70879707#frag_0",
+    "chunk_id": "3efcd90e70879707",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      2
+    ],
+    "section_title": "Today\u2019s Learning Outcomes",
+    "text": "Today\u2019s Learning Outcomes  LO1  Identify trend, seasonality, cycle and irregular variation.  LO2  Choose additive or multiplicative decomposition.  LO3  Calculate CMA, seasonal indices and deseasonali"
+  },
+  {
+    "record_id": "0271897f5c6411a1#frag_0",
+    "chunk_id": "0271897f5c6411a1",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      3
+    ],
+    "section_title": "The Story: A Manager Sees a Puzzle",
+    "text": "The Story: A Manager Sees a Puzzle  Sales are increasing. Some months are always high. Some months are always low. One forecast must explain all patterns. DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sab.ac.lk \u2022 "
+  },
+  {
+    "record_id": "cbc957bc54594fda#frag_0",
+    "chunk_id": "cbc957bc54594fda",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      4
+    ],
+    "section_title": "WHY Do We Need Decomposition?",
+    "text": "WHY Do We Need Decomposition?  \u2022 Raw data mixes many stories together. \u2022 Trend tells long-term direction. \u2022 Seasonality tells repeated calendar effect. \u2022 Irregular variation tells random disturbance. "
+  },
+  {
+    "record_id": "455e49bf5209a328#frag_0",
+    "chunk_id": "455e49bf5209a328",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      5
+    ],
+    "section_title": "WHAT Are the Components?",
+    "text": "WHAT Are the Components?  \u2022 Trend (T): long-term increase or decrease. \u2022 Seasonal (S): fixed repeating pattern. \u2022 Cycle (C): long waves without fixed calendar length. \u2022 Irregular (I): random unexplain"
+  },
+  {
+    "record_id": "9fb0e2a21be25825#frag_0",
+    "chunk_id": "9fb0e2a21be25825",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      6
+    ],
+    "section_title": "T",
+    "text": "Easy Way to Remember Components  T  Direction  S  Calendar repetition  C  Business/economic wave  I  Unplanned disturbance  DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sab.ac.lk \u2022 Slide 6"
+  },
+  {
+    "record_id": "f2d659fa9a7c362f#frag_0",
+    "chunk_id": "f2d659fa9a7c362f",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      7
+    ],
+    "section_title": "WHEN Is Additive Decomposition Suitable?",
+    "text": "WHEN Is Additive Decomposition Suitable?  Seasonal size is roughly constant. Variation does not grow with level. Formula: Y\u209c = T\u209c + S\u209c + I\u209c  DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sab.ac.lk \u2022 Slide 7"
+  },
+  {
+    "record_id": "4a6dee1879b3edbb#frag_0",
+    "chunk_id": "4a6dee1879b3edbb",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      8
+    ],
+    "section_title": "WHEN Is Multiplicative Suitable?",
+    "text": "WHEN Is Multiplicative Suitable?  Seasonal size grows with level. Season is naturally a percentage. Formula: Y\u209c = T\u209c \u00d7 S\u209c \u00d7 I\u209c  DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sab.ac.lk \u2022 Slide 8"
+  },
+  {
+    "record_id": "f81aa1dd305745f7#frag_0",
+    "chunk_id": "f81aa1dd305745f7",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      9
+    ],
+    "section_title": "Easy Decision Rule",
+    "text": "Easy Decision Rule  Same size ups and  Growing ups and  downs  downs  Use MULTIPLICATIVE  Use ADDITIVE  DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sab.ac.lk \u2022 Slide 9"
+  },
+  {
+    "record_id": "74f6bf51abd3a9dd#frag_0",
+    "chunk_id": "74f6bf51abd3a9dd",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      10
+    ],
+    "section_title": "ACTIVITY 1 \u2022 Additive or Multiplicative?",
+    "text": "ACTIVITY 1 \u2022 Additive or Multiplicative?  A. Temperature has a similar seasonal range each year. B. Tourist arrivals grow; peak-month effect also grows. C. Shop sales are around 100; December adds abo"
+  },
+  {
+    "record_id": "2d9b93188049ad2e#frag_0",
+    "chunk_id": "2d9b93188049ad2e",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      11
+    ],
+    "section_title": "Activity 1 \u2022 Suggested Answer",
+    "text": "Activity 1 \u2022 Suggested Answer  A. Additive: seasonal size is similar each year. B. Multiplicative: seasonal effect grows with level. C. Additive: December adds about the same number of units.  DS5104 "
+  },
+  {
+    "record_id": "1188414c218e23f3#frag_0",
+    "chunk_id": "1188414c218e23f3",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      12
+    ],
+    "section_title": "HOW Do We Estimate Trend?",
+    "text": "HOW Do We Estimate Trend?  Method 1: moving average or centered moving average. Method 2: trend equation such as \u0176\u209c = a + bt. Trend estimate is used to remove seasonal noise.  Easy idea: smooth over o"
+  },
+  {
+    "record_id": "3cba47c636982e5e#frag_0",
+    "chunk_id": "3cba47c636982e5e",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      13
+    ],
+    "section_title": "Centered Moving Average: Why Center?",
+    "text": "Centered Moving Average: Why Center?  For quarterly data, seasonal period m = 4. A 4-period MA falls between two quarters. CMA puts the trend estimate back on a real time point.  CMA = average of two "
+  },
+  {
+    "record_id": "58c94d022dc72162#frag_0",
+    "chunk_id": "58c94d022dc72162",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      14
+    ],
+    "section_title": "Sales: 80, 100, 120, 100, 88, 110",
+    "text": "Worked Example: Quarterly Sales  Sales: 80, 100, 120, 100, 88, 110  Seasonal period = 4 quarters. First calculate 4-period MAs. Then center adjacent moving averages.  DS5104 \u2022 Lecture 5 \u2022 anupama@foc."
+  },
+  {
+    "record_id": "c98cf931f7550642#frag_0",
+    "chunk_id": "c98cf931f7550642",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      15
+    ],
+    "section_title": "Step 1: Calculate 4-Moving Averages",
+    "text": "Step 1: Calculate 4-Moving Averages  MA\u2081 = (80+100+120+100)/4 = 100  MA\u2082 = (100+120+100+88)/4 = 102  Easy way: slide the window one period  forward.  DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sab.ac.lk \u2022 Slide"
+  },
+  {
+    "record_id": "5efbafb65ffa6922#frag_0",
+    "chunk_id": "5efbafb65ffa6922",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      16
+    ],
+    "section_title": "Step 2: Center the Moving Averages",
+    "text": "Step 2: Center the Moving Averages  First CMA = (100 + 102) / 2 = 101  This 101 becomes the trend estimate. It helps us compare actual value with trend.  DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sab.ac.lk \u2022 S"
+  },
+  {
+    "record_id": "c78de79755930121#frag_0",
+    "chunk_id": "c78de79755930121",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      17
+    ],
+    "section_title": "ACTIVITY 2 \u2022 CMA Calculation",
+    "text": "ACTIVITY 2 \u2022 CMA Calculation  Given: MA\u2081 = 100, MA\u2082 = 102, MA\u2083 = 106  Calculate first CMA. Calculate second CMA. Explain why CMA is needed.  DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sab.ac.lk \u2022 Slide 17"
+  },
+  {
+    "record_id": "b5c2918c7e22554c#frag_0",
+    "chunk_id": "b5c2918c7e22554c",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      18
+    ],
+    "section_title": "Activity 2 \u2022",
+    "text": "Activity 2 \u2022  First CMA = (100 + 102) / 2 = 101. Second CMA = (102 + 106) / 2 = 104. CMA is needed because an even moving average lies between periods.  DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sab.ac.lk \u2022 Sl"
+  },
+  {
+    "record_id": "8472ec53de2f5e4f#frag_0",
+    "chunk_id": "8472ec53de2f5e4f",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      19
+    ],
+    "section_title": "HOW Do We Estimate Seasonal Effects?",
+    "text": "HOW Do We Estimate Seasonal Effects?  Additive: Seasonal effect = Y\u209c \u2212 T\u209c  Multiplicative: Seasonal ratio = Y\u209c / T\u209c  Then average by season.  DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sab.ac.lk \u2022 Slide 19"
+  },
+  {
+    "record_id": "76d27801e42c68c7#frag_0",
+    "chunk_id": "76d27801e42c68c7",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      20
+    ],
+    "section_title": "Seasonal Index: How to Read It",
+    "text": "Seasonal Index: How to Read It  100 = normal season. 125 = 25% above normal. 80 = 20% below normal.  DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sab.ac.lk \u2022 Slide 20"
+  },
+  {
+    "record_id": "a9d2c94f3537ba06#frag_0",
+    "chunk_id": "a9d2c94f3537ba06",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      21
+    ],
+    "section_title": "ACTIVITY 3 \u2022 Interpret Indices",
+    "text": "ACTIVITY 3 \u2022 Interpret Indices  January index = 82 July index = 126 December index = 76  Write one sentence for each index.  DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sab.ac.lk \u2022 Slide 21"
+  },
+  {
+    "record_id": "5fa7232e3159440e#frag_0",
+    "chunk_id": "5fa7232e3159440e",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      22
+    ],
+    "section_title": "Activity 3 \u2022 Suggested Answer",
+    "text": "Activity 3 \u2022 Suggested Answer  January is about 18% below normal. July is about 26% above normal. December is about 24% below normal. Seasonal index is a relative effect, not raw units.  DS5104 \u2022 Lect"
+  },
+  {
+    "record_id": "351396764ea1b7ed#frag_0",
+    "chunk_id": "351396764ea1b7ed",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      23
+    ],
+    "section_title": "HOW Do We Deseasonalize?",
+    "text": "HOW Do We Deseasonalize?  Additive: Deseasonalized = Y\u209c \u2212 S\u209c  Multiplicative: Deseasonalized = Y\u209c / S\u209c  Purpose: compare values after removing  seasonal advantage.  DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sa"
+  },
+  {
+    "record_id": "b2b567d07adb5d5d#frag_0",
+    "chunk_id": "b2b567d07adb5d5d",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      24
+    ],
+    "section_title": "Easy Calculation Example",
+    "text": "Easy Calculation Example  Observed sales = 240  Seasonal index = 120% = 1.20  Deseasonalized = 240 / 1.20 = 200  DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sab.ac.lk \u2022 Slide 24"
+  },
+  {
+    "record_id": "ba3c7fdaf172a611#frag_0",
+    "chunk_id": "ba3c7fdaf172a611",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      25
+    ],
+    "section_title": "ACTIVITY 4 \u2022 Deseasonalize",
+    "text": "ACTIVITY 4 \u2022 Deseasonalize  Observed demand = 390; Seasonal index  = 130%  Convert 130% to decimal form. Find deseasonalized demand. Explain the answer in words.  DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sab."
+  },
+  {
+    "record_id": "357b1322416c6eeb#frag_0",
+    "chunk_id": "357b1322416c6eeb",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      26
+    ],
+    "section_title": "Activity 4 \u2022 Suggested Answer",
+    "text": "Activity 4 \u2022 Suggested Answer  130% = 1.30. Deseasonalized demand = 390 / 1.30 = 300. After removing seasonal increase, the underlying demand is 300.  DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sab.ac.lk \u2022 Slid"
+  },
+  {
+    "record_id": "2774f978919d7f64#frag_0",
+    "chunk_id": "2774f978919d7f64",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      27
+    ],
+    "section_title": "HOW Do We Reconstruct or Forecast?",
+    "text": "HOW Do We Reconstruct or Forecast?  Additive forecast = Trend forecast + Seasonal  effect  Multiplicative forecast = Trend forecast \u00d7 Seasonal  index  Separate the story, model it, then put it  back t"
+  },
+  {
+    "record_id": "572d376ebd5d43e9#frag_0",
+    "chunk_id": "572d376ebd5d43e9",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      28
+    ],
+    "section_title": "Software Output: What Should Students Read?",
+    "text": "Software Output: What Should Students Read?  Model type Trend equation Seasonal indices Accuracy measure Next forecast  DS5104 \u2022 Lecture 5 \u2022 anupama@foc.sab.ac.lk \u2022 Slide 28"
+  },
+  {
+    "record_id": "dec9054e2b84e7f2#frag_0",
+    "chunk_id": "dec9054e2b84e7f2",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      29
+    ],
+    "section_title": "ACTIVITY 5 \u2022 Interpret Software Output",
+    "text": "ACTIVITY 5 \u2022 Interpret Software Output  July seasonal index = 1.26  MAPE = 6.8%  What does July index mean? Is the forecast error small or large? What else should we check?  DS5104 \u2022 Lecture 5 \u2022 anupa"
+  },
+  {
+    "record_id": "ae8f981c4581a61b#frag_0",
+    "chunk_id": "ae8f981c4581a61b",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      30
+    ],
+    "section_title": "Activity 5 \u2022 Suggested Answer",
+    "text": "Activity 5 \u2022 Suggested Answer  July is about 26% above normal level. MAPE = 6.8% suggests average percentage error is 6.8%. Also check residual pattern and whether decomposition assumptions are reason"
+  },
+  {
+    "record_id": "f12b9bca070f8945#frag_0",
+    "chunk_id": "f12b9bca070f8945",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      31
+    ],
+    "section_title": "Common Mistakes to Avoid",
+    "text": "Common Mistakes to Avoid  Do not call every repeated movement a cycle. Do not use multiplicative indices as raw units. Do not forget to convert 120% to 1.20. Do not forecast and forget to add/multiply"
+  },
+  {
+    "record_id": "9ae025f79df9b2a2#frag_0",
+    "chunk_id": "9ae025f79df9b2a2",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      32
+    ],
+    "section_title": "Learning Outcomes Check",
+    "text": "Learning Outcomes Check  LO1  Label components in a new plot.  LO2  Select additive or multiplicative model.  LO3  Calculate CMA and seasonal index.  LO4  Interpret decomposition software output.  DS5"
+  },
+  {
+    "record_id": "76fb290b5e9a12d5#frag_0",
+    "chunk_id": "76fb290b5e9a12d5",
+    "source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "source_pages": [
+      33
+    ],
+    "section_title": "Exit Ticket",
+    "text": "Exit Ticket  1. What is the easy rule for additive vs multiplicative? 2. Why do we use CMA? 3. Interpret seasonal index 125. 4. Why do we deseasonalize?  Next lecture: Stationarity and  Differencing  "
+  },
+  {
+    "record_id": "dcb168f4c12bb6f8#frag_0",
+    "chunk_id": "dcb168f4c12bb6f8",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      1
+    ],
+    "section_title": null,
+    "text": "Stationarity & Differencing  Making a time series ready for statistical  modelling  DS5104 \u2022 Lecture 6 \u2022 Stationarity & Differencing \u2022 anupama@foc.sab.ac.lk \u2022 Slide 1/35"
+  },
+  {
+    "record_id": "f971a6b423b61368#frag_0",
+    "chunk_id": "f971a6b423b61368",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      2
+    ],
+    "section_title": "Learning Outcomes",
+    "text": "Learning Outcomes  LO1  Explain stationary vs nonstationary time series.  LO2  Identify trend, changing variance and seasonal nonstationarity.  LO3  Apply first, second and seasonal differencing.  LO4"
+  },
+  {
+    "record_id": "ae89831be08a797d#frag_0",
+    "chunk_id": "ae89831be08a797d",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      3
+    ],
+    "section_title": "REAL PROBLEM",
+    "text": "The Story Begins: Can We Trust the Past?  REAL PROBLEM  Weekly dengue cases rise during rainy months. Can last month\u2019s pattern predict  next month?  A forecast model assumes the past pattern is useful"
+  },
+  {
+    "record_id": "4178df85f5a5aeab#frag_0",
+    "chunk_id": "4178df85f5a5aeab",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      4
+    ],
+    "section_title": "WHY Do We Need Stationarity?",
+    "text": "WHY Do We Need Stationarity?  Many time-series models learn from repeated behaviour. If mean, variance or dependence keeps changing, the model learns an unstable pattern. Stationarity makes the series"
+  },
+  {
+    "record_id": "015b85c596813f86#frag_0",
+    "chunk_id": "015b85c596813f86",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      5
+    ],
+    "section_title": "A stationary series behaves with a",
+    "text": "WHAT is Stationarity?  A stationary series behaves with a  stable pattern over time.  Stationary-looking  Nonstationary  Stable average level Stable spread Dependence pattern repeats  Trend changes le"
+  },
+  {
+    "record_id": "ba7ea14307b792d2#frag_0",
+    "chunk_id": "ba7ea14307b792d2",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      6
+    ],
+    "section_title": "Visual Difference",
+    "text": "Visual Difference  Ask: Does it return to a stable level? Ask: Does spread explode over time? Visual check is first, not final.  DS5104 \u2022 Lecture 6 \u2022 Stationarity & Differencing \u2022 anupama@foc.sab.ac.l"
+  },
+  {
+    "record_id": "0e294bbce3d1bfef#frag_0",
+    "chunk_id": "0e294bbce3d1bfef",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      7
+    ],
+    "section_title": "E(Y\u209c) = \u03bc for all time t",
+    "text": "Theory: Weak Stationarity  E(Y\u209c) = \u03bc for all time t  Var(Y\u209c) = \u03c3\u00b2 for all time t  Cov(Y\u209c, Y\u209c\u208b\u2096) depends only on lag k  Easy words: same mean, same variance,  same lag-relationship.  DS5104 \u2022 Lecture 6"
+  },
+  {
+    "record_id": "409d495bf6d9a765#frag_0",
+    "chunk_id": "409d495bf6d9a765",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      8
+    ],
+    "section_title": "STUDENT TASK",
+    "text": "Activity 1 \u2022 Visual Diagnosis  STUDENT TASK  Look at a time plot. What three  questions should you ask before  modelling? Question 1: about the mean. Question 2: about the variance. Question 3: about "
+  },
+  {
+    "record_id": "634ca6b4ab917db7#frag_0",
+    "chunk_id": "634ca6b4ab917db7",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      9
+    ],
+    "section_title": "Activity 1 \u2022 Suggested Answer",
+    "text": "Activity 1 \u2022 Suggested Answer  Is the average level roughly constant? Is the variability roughly constant? Is there a seasonal pattern that has not been removed? If the answer is no, transform or diff"
+  },
+  {
+    "record_id": "4264cff7c4c5eb9d#frag_0",
+    "chunk_id": "4264cff7c4c5eb9d",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      10,
+      11
+    ],
+    "section_title": "Common Types of Nonstationarity",
+    "text": "Common Types of Nonstationarity  Trend nonstationarity: level increases or decreases. Seasonal nonstationarity: repeated seasonal pattern remains. Variance nonstationarity: spread changes with level. "
+  },
+  {
+    "record_id": "452241821d340888#frag_0",
+    "chunk_id": "452241821d340888",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      12
+    ],
+    "section_title": "WHY Random Walk Is Nonstationary",
+    "text": "WHY Random Walk Is Nonstationary  Y\u209c = Y\u2080 + \u03b5\u2081 + \u03b5\u2082 + \u2026 + \u03b5\u209c  Var(Y\u209c) = t\u03c3\u00b2  Variance grows with time \u2192not  stationary.  DS5104 \u2022 Lecture 6 \u2022 Stationarity & Differencing \u2022 anupama@foc.sab.ac.lk \u2022 Slid"
+  },
+  {
+    "record_id": "3dc6711eb5d8651c#frag_0",
+    "chunk_id": "3dc6711eb5d8651c",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      13
+    ],
+    "section_title": "HOW Do We Remove a Changing Level?",
+    "text": "HOW Do We Remove a Changing Level?  First difference: \u2207Y\u209c = Y\u209c \u2212 Y\u209c\u208b\u2081  It changes the question from level to change. Useful for trend and random-walk-like behaviour. After differencing, check the plot"
+  },
+  {
+    "record_id": "0f721261a5da8e9a#frag_0",
+    "chunk_id": "0f721261a5da8e9a",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      14
+    ],
+    "section_title": "Before and After First Differencing",
+    "text": "Before and After First Differencing  Original series has trend. Difference series is more stable. This prepares for ARMA/ARIMA ideas. DS5104 \u2022 Lecture 6 \u2022 Stationarity & Differencing \u2022 anupama@foc.sab"
+  },
+  {
+    "record_id": "d255731ccd6eef89#frag_0",
+    "chunk_id": "d255731ccd6eef89",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      15
+    ],
+    "section_title": "Monthly price index: 100, 103, 108,",
+    "text": "Worked Example: First Difference  Monthly price index: 100, 103, 108,  111, 117  \u2207Y\u2082 = 103 \u2212 100 = 3  \u2207Y\u2083 = 108 \u2212 103 = 5  New series starts from time 2.  DS5104 \u2022 Lecture 6 \u2022 Stationarity & Differenc"
+  },
+  {
+    "record_id": "0fee8133081a79ce#frag_0",
+    "chunk_id": "0fee8133081a79ce",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      16
+    ],
+    "section_title": "CALCULATE",
+    "text": "Activity 2 \u2022 Calculate First Differences  CALCULATE  Weekly demand: 45, 48, 52, 51, 56, 60  Find all first differences. Then say whether demand is mostly increasing.  DS5104 \u2022 Lecture 6 \u2022 Stationarity"
+  },
+  {
+    "record_id": "d7b7b3739ff4d3e6#frag_0",
+    "chunk_id": "d7b7b3739ff4d3e6",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      17
+    ],
+    "section_title": "48 \u2212 45 = 3 52 \u2212 48 = 4 51 \u2212 52 = \u22121 56 \u2212 51 = 5 60 \u2212 56 = 4 Mostly increasing, with one small fall.",
+    "text": "Activity 2 \u2022 Answer  48 \u2212 45 = 3 52 \u2212 48 = 4 51 \u2212 52 = \u22121 56 \u2212 51 = 5 60 \u2212 56 = 4 Mostly increasing, with one small fall.  DS5104 \u2022 Lecture 6 \u2022 Stationarity & Differencing \u2022 anupama@foc.sab.ac.lk \u2022 Sl"
+  },
+  {
+    "record_id": "1ce71e77c6493c61#frag_0",
+    "chunk_id": "1ce71e77c6493c61",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      18
+    ],
+    "section_title": "WHEN Do We Use Second Differencing?",
+    "text": "WHEN Do We Use Second Differencing?  Second difference: \u2207\u00b2Y\u209c = \u2207Y\u209c \u2212 \u2207Y\u209c\u208b\u2081  Use when first differences still show a trend. It captures change in the change. Avoid using it unnecessarily.  DS5104 \u2022 Lec"
+  },
+  {
+    "record_id": "48d7fcb381b0cac4#frag_0",
+    "chunk_id": "48d7fcb381b0cac4",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      19
+    ],
+    "section_title": "More differencing is NOT always",
+    "text": "Important Warning: Do Not Over- Difference  More differencing is NOT always  better.  Over-differencing can create artificial noise. It can make forecasts unstable. Use the smallest differencing neede"
+  },
+  {
+    "record_id": "2c75bdad618a3c0f#frag_0",
+    "chunk_id": "2c75bdad618a3c0f",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      20
+    ],
+    "section_title": "Seasonal Differencing",
+    "text": "Seasonal Differencing  Seasonal difference: \u2207\u209bY\u209c = Y\u209c \u2212 Y\u209c\u208b\u209b  s = seasonal period. Monthly data with yearly seasonality: s = 12. Quarterly data with yearly seasonality: s = 4.  DS5104 \u2022 Lecture 6 \u2022 St"
+  },
+  {
+    "record_id": "b921c80bf0264b15#frag_0",
+    "chunk_id": "b921c80bf0264b15",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      21
+    ],
+    "section_title": "Before and After Seasonal Differencing",
+    "text": "Before and After Seasonal Differencing  Compares this season with last same season. Useful when peaks repeat every year. Then check remaining trend. DS5104 \u2022 Lecture 6 \u2022 Stationarity & Differencing \u2022 "
+  },
+  {
+    "record_id": "8f9e5c25e8eb9e31#frag_0",
+    "chunk_id": "8f9e5c25e8eb9e31",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      22
+    ],
+    "section_title": "Quarterly sales: 80, 100, 120, 100, 88,",
+    "text": "Worked Example: Quarterly Seasonal Difference  Quarterly sales: 80, 100, 120, 100, 88,  110, 132, 112  s = 4, so compare each quarter with same  quarter last year  Y\u2085 \u2212 Y\u2081 = 88 \u2212 80 = 8  Continue: Y\u2086\u2212"
+  },
+  {
+    "record_id": "43337b9ce6f4751b#frag_0",
+    "chunk_id": "43337b9ce6f4751b",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      23
+    ],
+    "section_title": "CALCULATE",
+    "text": "Activity 3 \u2022 Seasonal Differences  CALCULATE  Quarterly demand: 50, 70, 90, 60, 55,  78, 96, 66  Use s = 4. Calculate four seasonal differences.  DS5104 \u2022 Lecture 6 \u2022 Stationarity & Differencing \u2022 anu"
+  },
+  {
+    "record_id": "1d974817b61803ed#frag_0",
+    "chunk_id": "1d974817b61803ed",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      24
+    ],
+    "section_title": "55 \u2212 50 = 5 78 \u2212 70 = 8 96 \u2212 90 = 6 66 \u2212 60 = 6 Interpretation: each quarter is slightly higher than the same quarter last year.",
+    "text": "Activity 3 \u2022 Answer  55 \u2212 50 = 5 78 \u2212 70 = 8 96 \u2212 90 = 6 66 \u2212 60 = 6 Interpretation: each quarter is slightly higher than the same quarter last year.  DS5104 \u2022 Lecture 6 \u2022 Stationarity & Differencing "
+  },
+  {
+    "record_id": "a2141a0929f4e6db#frag_0",
+    "chunk_id": "a2141a0929f4e6db",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      25
+    ],
+    "section_title": "What If Variance Changes?",
+    "text": "What If Variance Changes?  If fluctuations grow with the level, differencing alone may not be enough. A log transformation often stabilizes percentage-type variation. Then differencing can be applied "
+  },
+  {
+    "record_id": "d9778ba167a8fc7d#frag_0",
+    "chunk_id": "d9778ba167a8fc7d",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      26
+    ],
+    "section_title": "Log Transformation Example",
+    "text": "Log Transformation Example  Original spread grows with level. Log scale compresses large values. Useful before ARIMA modelling.  DS5104 \u2022 Lecture 6 \u2022 Stationarity & Differencing \u2022 anupama@foc.sab.ac.l"
+  },
+  {
+    "record_id": "b4c5f47e41da0039#frag_0",
+    "chunk_id": "b4c5f47e41da0039",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      27
+    ],
+    "section_title": "Log Difference as Growth Rate",
+    "text": "Log Difference as Growth Rate  Approximate percentage change. Often used for prices, sales and population. Interpret carefully.  DS5104 \u2022 Lecture 6 \u2022 Stationarity & Differencing \u2022 anupama@foc.sab.ac.l"
+  },
+  {
+    "record_id": "127078d7a3c0d366#frag_0",
+    "chunk_id": "127078d7a3c0d366",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      28
+    ],
+    "section_title": "Software Application: What to Do",
+    "text": "Software Application: What to Do  1. Plot the original series. 2. Apply transformation if variance changes. 3. Apply first or seasonal differencing. 4. Plot the differenced series. 5. Check whether it"
+  },
+  {
+    "record_id": "f14405d729979357#frag_0",
+    "chunk_id": "f14405d729979357",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      29
+    ],
+    "section_title": "Augmented Dickey-Fuller Test",
+    "text": "Example Software Output: Interpret It  Augmented Dickey-Fuller Test  Original series: p-value = 0.43  First difference: p-value = 0.02  Small p-value gives evidence against a unit root. Here, differen"
+  },
+  {
+    "record_id": "fdf981b71fe2d6f1#frag_0",
+    "chunk_id": "fdf981b71fe2d6f1",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      30
+    ],
+    "section_title": "Do Not Depend on One Test Only",
+    "text": "Do Not Depend on One Test Only  Use plots, theory and tests together. A test can be affected by sample size. Seasonality, outliers and structural breaks can mislead diagnosis. The goal is a modelable "
+  },
+  {
+    "record_id": "54ba9f174ddb54eb#frag_0",
+    "chunk_id": "54ba9f174ddb54eb",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      31
+    ],
+    "section_title": "Easy Decision Flow",
+    "text": "Easy Decision Flow  First difference  Seasonality  Plot series  Trend?  ?  Seasonal difference  Check again  DS5104 \u2022 Lecture 6 \u2022 Stationarity & Differencing \u2022 anupama@foc.sab.ac.lk \u2022 Slide 31/35"
+  },
+  {
+    "record_id": "ac57eb1bdaad4085#frag_0",
+    "chunk_id": "ac57eb1bdaad4085",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      32
+    ],
+    "section_title": "Activity 4 \u2022 Choose the Treatment",
+    "text": "Activity 4 \u2022 Choose the Treatment  A. Monthly airline passengers: growth + bigger seasonal swings. B. Weekly demand: clear upward trend, no seasonality. C. Quarterly harvest output: seasonal pattern e"
+  },
+  {
+    "record_id": "9fb1898b9e1de252#frag_0",
+    "chunk_id": "9fb1898b9e1de252",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      33
+    ],
+    "section_title": "Activity 4 \u2022 Suggested Answer",
+    "text": "Activity 4 \u2022 Suggested Answer  A. Consider log transformation, then seasonal and/or first differencing. B. First differencing may be enough. C. Seasonal differencing with s = 4 is useful. Always plot "
+  },
+  {
+    "record_id": "aed067056c2e6c65#frag_0",
+    "chunk_id": "aed067056c2e6c65",
+    "source_file": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "source_pages": [
+      34,
+      35
+    ],
+    "section_title": "Learning Outcomes Check",
+    "text": "Learning Outcomes Check  LO1  Explain stationarity in your own words.  Identify the type of nonstationarity from a plot.  LO2  LO3  Calculate first and seasonal differences.  Choose a preparation stra"
+  },
+  {
+    "record_id": "c22f90c0c031bda2#frag_0",
+    "chunk_id": "c22f90c0c031bda2",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      1
+    ],
+    "section_title": null,
+    "text": "DS5104 \u2022 Lecture 7"
+  },
+  {
+    "record_id": "a0e4546cc5025c28#frag_0",
+    "chunk_id": "a0e4546cc5025c28",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      1
+    ],
+    "section_title": "Autocorrelation & ACF",
+    "text": "Autocorrelation & ACF  How much does the past explain the  present?  Story path: WHY \u2192LAG \u2192COVARIANCE"
+  },
+  {
+    "record_id": "be05c7129ce1e2f0#frag_0",
+    "chunk_id": "be05c7129ce1e2f0",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      1
+    ],
+    "section_title": "\u2192ACF \u2192CORRELOGRAM",
+    "text": "\u2192ACF \u2192CORRELOGRAM  DS5104 \u2022 Lecture 7 \u2022 Autocorrelation & ACF \u2022 anupama@foc.sab.ac.lk \u2022 Slide 1"
+  },
+  {
+    "record_id": "d983e230ca4f2d00#frag_0",
+    "chunk_id": "d983e230ca4f2d00",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      2
+    ],
+    "section_title": "Learning Outcomes",
+    "text": "Learning Outcomes  LO1  Explain why autocorrelation is needed in time series.  LO2  Define lag, autocovariance and autocorrelation.  LO3  Calculate and interpret simple autocorrelation values.  Read A"
+  },
+  {
+    "record_id": "159336a3471969d6#frag_0",
+    "chunk_id": "159336a3471969d6",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      3
+    ],
+    "section_title": "REAL PROBLEM",
+    "text": "The Story Begins: Is Today Linked to Yesterday?  REAL PROBLEM  If dengue cases were high this week, should we expect next week to also be  high?  Time series are not usually independent. We need a way"
+  },
+  {
+    "record_id": "cde2dd8b4d4c7f79#frag_0",
+    "chunk_id": "cde2dd8b4d4c7f79",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      4
+    ],
+    "section_title": "WHY Not Use Ordinary Correlation Only?",
+    "text": "WHY Not Use Ordinary Correlation Only?  Ordinary correlation compares two different variables. Autocorrelation compares a series with its own past. Question changes from X vs Y to Y\u209c vs Y\u209c\u208b\u2096. This is "
+  },
+  {
+    "record_id": "1574200cc13fdcfe#frag_0",
+    "chunk_id": "1574200cc13fdcfe",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      5
+    ],
+    "section_title": "WHAT is a Lag?",
+    "text": "WHAT is a Lag?  Lag k means comparing Y\u209c with Y\u209c\u208b\u2096  Lag 1: today with yesterday. Lag 2: today with two periods ago. Lag 12 for monthly data: this month with same month last year.  DS5104 \u2022 Lecture 7 \u2022"
+  },
+  {
+    "record_id": "484aa001f4b18aed#frag_0",
+    "chunk_id": "484aa001f4b18aed",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      6
+    ],
+    "section_title": "Lag-1 Relationship",
+    "text": "Lag-1 Relationship  Each point pairs a value with its previous value. Upward cloud means positive autocorrelation. Random cloud suggests little memory.  DS5104 \u2022 Lecture 7 \u2022 Autocorrelation & ACF \u2022 an"
+  },
+  {
+    "record_id": "33b8ca03288c10cf#frag_0",
+    "chunk_id": "33b8ca03288c10cf",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      7,
+      8
+    ],
+    "section_title": "Theory: Autocovariance",
+    "text": "Theory: Autocovariance  \u03b3\u2096 = Cov(Y\u209c, Y\u209c\u208b\u2096)  It measures how values move together across lag k. Large positive \u03b3\u2096: high values tend to follow high values. But covariance depends on the measurement unit"
+  },
+  {
+    "record_id": "50ef39cdb78d248d#frag_0",
+    "chunk_id": "50ef39cdb78d248d",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      9
+    ],
+    "section_title": "How to Interpret \u03c1\u2096",
+    "text": "How to Interpret \u03c1\u2096  similar values repeat  \u03c1\u2096 close to +1  little linear memory  \u03c1\u2096 close to 0  high tends to follow low  \u03c1\u2096 close to \u22121  DS5104 \u2022 Lecture 7 \u2022 Autocorrelation & ACF \u2022 anupama@foc.sab."
+  },
+  {
+    "record_id": "c37dd8d8bf6f26a8#frag_0",
+    "chunk_id": "c37dd8d8bf6f26a8",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      10
+    ],
+    "section_title": "Sample Autocorrelation",
+    "text": "Sample Autocorrelation  r\u2096 = \u03a3(Y\u209c \u2212 \u0232)(Y\u209c\u208b\u2096 \u2212 \u0232) / \u03a3(Y\u209c \u2212 \u0232)\u00b2  Use sample data to estimate the true autocorrelation. Software calculates many lags at once. But we calculate one small example to unders"
+  },
+  {
+    "record_id": "99d68c76bdc68218#frag_0",
+    "chunk_id": "99d68c76bdc68218",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      11
+    ],
+    "section_title": "Sales: 10, 12, 13, 15, 18",
+    "text": "Worked Example: Small Sales Series  Sales: 10, 12, 13, 15, 18  Mean \u0232 = 13.6  We will calculate lag-1 autocorrelation. Compare each value with the previous value.  DS5104 \u2022 Lecture 7 \u2022 Autocorrelation"
+  },
+  {
+    "record_id": "172ec9d433cb0ce6#frag_0",
+    "chunk_id": "172ec9d433cb0ce6",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      12
+    ],
+    "section_title": "Step 1: Create Lag-1 Pairs",
+    "text": "Step 1: Create Lag-1 Pairs  (12, 10) (13, 12) (15, 13) (18, 15) Current value is paired with previous value.  DS5104 \u2022 Lecture 7 \u2022 Autocorrelation & ACF \u2022 anupama@foc.sab.ac.lk \u2022 Slide 12"
+  },
+  {
+    "record_id": "8f909d438f04c2eb#frag_0",
+    "chunk_id": "8f909d438f04c2eb",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      13
+    ],
+    "section_title": "Step 2: What the Calculation Means",
+    "text": "Step 2: What the Calculation Means  positive products \u2192positive memory  negative products \u2192alternating  movement  Easy idea: Are high values followed by  high values?  DS5104 \u2022 Lecture 7 \u2022 Autocorrela"
+  },
+  {
+    "record_id": "bb2d85728aa66262#frag_0",
+    "chunk_id": "bb2d85728aa66262",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      14
+    ],
+    "section_title": "CALCULATE",
+    "text": "Activity 1 \u2022 Lag Pairing  CALCULATE  Create lag-1 pairs for: 20, 25, 23, 28,  30  Write pairs as (current, previous). Do values show positive memory?  DS5104 \u2022 Lecture 7 \u2022 Autocorrelation & ACF \u2022 anup"
+  },
+  {
+    "record_id": "9f75d7de87420675#frag_0",
+    "chunk_id": "9f75d7de87420675",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      15
+    ],
+    "section_title": "Activity 1 \u2022 Answer",
+    "text": "Activity 1 \u2022 Answer  (25, 20) (23, 25) (28, 23) (30, 28) Most movement suggests positive memory, but one drop exists.  DS5104 \u2022 Lecture 7 \u2022 Autocorrelation & ACF \u2022 anupama@foc.sab.ac.lk \u2022 Slide 15"
+  },
+  {
+    "record_id": "3a56d508d63fbfd1#frag_0",
+    "chunk_id": "3a56d508d63fbfd1",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      16
+    ],
+    "section_title": "WHAT is a Correlogram?",
+    "text": "WHAT is a Correlogram?  A correlogram is a plot of ACF values against lag. It shows memory structure visually. It helps identify white noise, trend, seasonality and model patterns.  ACF plot = autocor"
+  },
+  {
+    "record_id": "d46d67f0d189e61d#frag_0",
+    "chunk_id": "d46d67f0d189e61d",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      17
+    ],
+    "section_title": "Approximate bounds: \u00b1 1.96 /",
+    "text": "Significance Bounds in ACF  Approximate bounds: \u00b1 1.96 /  \u221an  Bars outside bounds may indicate significant autocorrelation. Use as a guide, not as the only decision. Many lags can create occasional fa"
+  },
+  {
+    "record_id": "bb649a69d546b686#frag_0",
+    "chunk_id": "bb649a69d546b686",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      18
+    ],
+    "section_title": "Pattern 1: White-Noise-Like Series",
+    "text": "Pattern 1: White-Noise-Like Series  DS5104 \u2022 Lecture 7 \u2022 Autocorrelation & ACF \u2022 anupama@foc.sab.ac.lk \u2022 Slide 18"
+  },
+  {
+    "record_id": "25009a64c356c405#frag_0",
+    "chunk_id": "25009a64c356c405",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      19
+    ],
+    "section_title": "Interpretation: White Noise",
+    "text": "Interpretation: White Noise  No strong repeated structure. Most ACF bars stay inside the bounds. Past values do not help much for prediction. Residuals of a good model should look like this.  DS5104 \u2022"
+  },
+  {
+    "record_id": "26e9a8e877ece850#frag_0",
+    "chunk_id": "26e9a8e877ece850",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      20
+    ],
+    "section_title": "Pattern 2: Series With Memory",
+    "text": "Pattern 2: Series With Memory  DS5104 \u2022 Lecture 7 \u2022 Autocorrelation & ACF \u2022 anupama@foc.sab.ac.lk \u2022 Slide 20"
+  },
+  {
+    "record_id": "684c0e07ba682b64#frag_0",
+    "chunk_id": "684c0e07ba682b64",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      21
+    ],
+    "section_title": "Interpretation: Positive Memory",
+    "text": "Interpretation: Positive Memory  ACF starts high and decays slowly. High values tend to be followed by high values. Low values tend to be followed by low values. This prepares us for autoregressive mo"
+  },
+  {
+    "record_id": "906dba35581f2fc6#frag_0",
+    "chunk_id": "906dba35581f2fc6",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      22
+    ],
+    "section_title": "Pattern 3: Seasonal Memory",
+    "text": "Pattern 3: Seasonal Memory  DS5104 \u2022 Lecture 7 \u2022 Autocorrelation & ACF \u2022 anupama@foc.sab.ac.lk \u2022 Slide 22"
+  },
+  {
+    "record_id": "e605b4b530a6d596#frag_0",
+    "chunk_id": "e605b4b530a6d596",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      23
+    ],
+    "section_title": "Interpretation: Seasonal Spikes",
+    "text": "Interpretation: Seasonal Spikes  Large ACF at seasonal lags suggests seasonality. Monthly yearly seasonality often appears near lag 12. Seasonal differencing may be needed before ARIMA. Always connect"
+  },
+  {
+    "record_id": "0b5b0049b14f8472#frag_0",
+    "chunk_id": "0b5b0049b14f8472",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      24
+    ],
+    "section_title": "Warning: Trend Can Fool the ACF",
+    "text": "Warning: Trend Can Fool the ACF  DS5104 \u2022 Lecture 7 \u2022 Autocorrelation & ACF \u2022 anupama@foc.sab.ac.lk \u2022 Slide 24"
+  },
+  {
+    "record_id": "77b5f17b91eaaeb1#frag_0",
+    "chunk_id": "77b5f17b91eaaeb1",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      25
+    ],
+    "section_title": "Interpretation: Nonstationary Trend Effect",
+    "text": "Interpretation: Nonstationary Trend Effect  Trending series often have high ACF at many lags. This may be caused by nonstationarity. Do not jump directly to AR models. First check stationarity and dif"
+  },
+  {
+    "record_id": "e9a21062e873d257#frag_0",
+    "chunk_id": "e9a21062e873d257",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      26
+    ],
+    "section_title": "STUDENT TASK",
+    "text": "Activity 2 \u2022 Read the ACF Pattern  STUDENT TASK  An ACF has large spikes at lags 12 and"
+  },
+  {
+    "record_id": "ab58149caa76f8ba#frag_0",
+    "chunk_id": "ab58149caa76f8ba",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      26
+    ],
+    "section_title": "24. What does this suggest?",
+    "text": "24. What does this suggest?  What is the likely data frequency? What preparation may be needed?  DS5104 \u2022 Lecture 7 \u2022 Autocorrelation & ACF \u2022 anupama@foc.sab.ac.lk \u2022 Slide 26"
+  },
+  {
+    "record_id": "e0f96635e094ebc7#frag_0",
+    "chunk_id": "e0f96635e094ebc7",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      27
+    ],
+    "section_title": "Activity 2 \u2022 Answer",
+    "text": "Activity 2 \u2022 Answer  It suggests seasonality. For monthly data, lag 12 means same month last year. Seasonal differencing may be needed. Then the ACF should be checked again.  DS5104 \u2022 Lecture 7 \u2022 Auto"
+  },
+  {
+    "record_id": "a0b64f8cdb5c6bdf#frag_0",
+    "chunk_id": "a0b64f8cdb5c6bdf",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      28
+    ],
+    "section_title": "Activity 3 \u2022 Match the Case",
+    "text": "Activity 3 \u2022 Match the Case  A. Most ACF bars inside bounds. B. ACF decays slowly from high positive values. C. ACF has repeated spikes every 4 lags. Match: white noise, trend/memory, quarterly season"
+  },
+  {
+    "record_id": "309c6c4e8ef48438#frag_0",
+    "chunk_id": "309c6c4e8ef48438",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      29
+    ],
+    "section_title": "Activity 3 \u2022 Answer",
+    "text": "Activity 3 \u2022 Answer  A \u2192white-noise-like behaviour. B \u2192strong memory or possible trend. C \u2192quarterly seasonality. Next action depends on plots and stationarity checks.  DS5104 \u2022 Lecture 7 \u2022 Autocorrel"
+  },
+  {
+    "record_id": "6ba97a888be7f56d#frag_0",
+    "chunk_id": "6ba97a888be7f56d",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      30
+    ],
+    "section_title": "Software Output: What to Read",
+    "text": "Software Output: What to Read  Lag ACF  Look at size and direction. Look at decay pattern. Look at seasonal spikes. Compare bars with confidence bounds.  1 0.72  2 0.53  3 0.39  DS5104 \u2022 Lecture 7 \u2022 A"
+  },
+  {
+    "record_id": "66d9ea19b55acd27#frag_0",
+    "chunk_id": "66d9ea19b55acd27",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      31
+    ],
+    "section_title": "INTERPRET",
+    "text": "Activity 4 \u2022 Output Interpretation  INTERPRET  ACF values are 0.72, 0.53, 0.39 for  lags 1, 2 and 3. What does this  suggest?  Use the phrase positive memory. Would you expect tomorrow to resemble tod"
+  },
+  {
+    "record_id": "20ae259ec8550f74#frag_0",
+    "chunk_id": "20ae259ec8550f74",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      32
+    ],
+    "section_title": "Activity 4 \u2022 Answer",
+    "text": "Activity 4 \u2022 Answer  The series shows positive memory. Recent values are related to past values. The relationship weakens as lag increases. This pattern is often important for AR-type modelling.  DS51"
+  },
+  {
+    "record_id": "f023a480961228b7#frag_0",
+    "chunk_id": "f023a480961228b7",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      33
+    ],
+    "section_title": "Common Mistakes",
+    "text": "Common Mistakes  Reading ACF before checking the time plot. Ignoring nonstationarity. Thinking one significant bar proves a model. Forgetting to connect lag size to data frequency. Using ACF alone wit"
+  },
+  {
+    "record_id": "4ce58f098c876090#frag_0",
+    "chunk_id": "4ce58f098c876090",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      34
+    ],
+    "section_title": "Easy Workflow",
+    "text": "Easy Workflow  Plot series  Decide next model  Read  Check stationarity  ACF  If residuals still have ACF, the model has  not learned all dependence.  DS5104 \u2022 Lecture 7 \u2022 Autocorrelation & ACF \u2022 anup"
+  },
+  {
+    "record_id": "fda336246977bb66#frag_0",
+    "chunk_id": "fda336246977bb66",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      35
+    ],
+    "section_title": "Final Knowledge Check",
+    "text": "Final Knowledge Check  1. What is lag 1? 2. Why is ACF useful? 3. What does ACF near 0 mean? 4. What does a spike at lag 12 suggest? 5. Why can trend mislead the ACF?  DS5104 \u2022 Lecture 7 \u2022 Autocorrela"
+  },
+  {
+    "record_id": "e13d8b1dd6fd64c8#frag_0",
+    "chunk_id": "e13d8b1dd6fd64c8",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      36
+    ],
+    "section_title": "Final Knowledge Check \u2022 Answers",
+    "text": "Final Knowledge Check \u2022 Answers  Lag 1 compares Y\u209c with Y\u209c\u208b\u2081. ACF measures memory across time. ACF near 0 suggests little linear dependence at that lag. Lag 12 may suggest yearly seasonality in monthl"
+  },
+  {
+    "record_id": "fbc82343029c1cee#frag_0",
+    "chunk_id": "fbc82343029c1cee",
+    "source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "source_pages": [
+      37
+    ],
+    "section_title": "Closing Motivation",
+    "text": "Closing Motivation  ACF lets the series speak about its  own memory.  Next: PACF tells us which lags have  direct influence.  This is the bridge from plots to ARIMA model  identification.  DS5104 \u2022 Le"
+  }
+]
