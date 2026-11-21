@@ -1,0 +1,81 @@
+[
+  {
+    "model_name": "Qwen/Qwen2.5-1.5B-Instruct",
+    "quantization": "4bit",
+    "context_window": 2048,
+    "load_time_sec": 1435.93,
+    "weights_vram_mb": 1099.93,
+    "overall_peak_vram_mb": 1146.5,
+    "post_release_vram_mb": 0.0,
+    "avg_tokens_per_sec": 9.16,
+    "total_generated_tokens": 1206,
+    "total_gen_time_sec": 131.61,
+    "prompts": [
+      {
+        "id": "P1_formula_preservation",
+        "category": "Exact Formula & Notation Preservation",
+        "prompt_tokens": 98,
+        "completion_tokens": 384,
+        "latency_ms": 54697.4,
+        "tokens_per_sec": 7.02,
+        "peak_vram_mb": 1123.25,
+        "finish_reason": "length",
+        "adherence_passed": true,
+        "response_snippet": "The choice between a multiplicative or additive time series model depends on the underlying structure of the data and the research question at hand. The multiplicative model \\( Y_t = T_t \\times S_t \\t",
+        "full_response": "The choice between a multiplicative or additive time series model depends on the underlying structure of the data and the research question at hand. The multiplicative model \\( Y_t = T_t \\times S_t \\times I_t \\) is more appropriate when the components of the time series exhibit non-linear relationships that cannot be adequately captured by addition. This can occur in scenarios where one component (e.g., seasonality) has a significant impact on another component (e.g., trend), leading to a multiplicative relationship.\n\nOn the other hand, the additive model \\( Y_t = T_t + S_t + I_t \\) is suitable when the components of the time series are assumed to have linear relationships with each other. This assumption simplifies the modeling process but may not accurately reflect complex interactions within the data.\n\nIn practice, if you observe phenomena such as:\n\n1. **Non-Linear Seasonal Effects**: If seasonal effects are particularly strong and interact significantly with other components, a multiplicative model might better capture these dynamics.\n2. **Multiplicative Trends**: When there's a clear multiplicative relationship between the trend and seasonal components, a multiplicative model would be more accurate.\n3. **Interaction Terms**: In cases where the effect of one variable on another is dependent on its level, a multiplicative model allows for this interaction without introducing unnecessary complexity.\n\nFor example, consider a dataset showing sales growth influenced by both advertising spend (\\(T\\)) and economic conditions (\\(S\\)). Here, the multiplicative model \\( Sales_t = Advertising_t \\times Economic_t \\) could better represent the true nature of the relationship compared to an additive model like \\( Sales_t = Advertising_t + Economic_t \\).\n\nConversely, if the interest lies in understanding how changes in advertising spend affect sales independently of economic conditions, an additive model \\( Sales_t = Advertising_t + Economic_t \\) would suffice.\n\nIn conclusion,"
+      },
+      {
+        "id": "P2_citation_adherence",
+        "category": "Evidence Citation Adherence",
+        "prompt_tokens": 132,
+        "completion_tokens": 57,
+        "latency_ms": 6322.6,
+        "tokens_per_sec": 9.02,
+        "peak_vram_mb": 1145.68,
+        "finish_reason": "stop",
+        "adherence_passed": true,
+        "response_snippet": "The two core conditions of weak stationarity as described by [E1] are:  1. The mean $\\mu$ is constant over time. 2. The autocovariance $\\gamma(t, t+k)$ depends only on the lag $k$, not on time $t$.",
+        "full_response": "The two core conditions of weak stationarity as described by [E1] are:\n\n1. The mean $\\mu$ is constant over time.\n2. The autocovariance $\\gamma(t, t+k)$ depends only on the lag $k$, not on time $t$."
+      },
+      {
+        "id": "P3_step_by_step_derivation",
+        "category": "Mathematical Derivation & Calculation",
+        "prompt_tokens": 143,
+        "completion_tokens": 384,
+        "latency_ms": 35131.0,
+        "tokens_per_sec": 10.93,
+        "peak_vram_mb": 1146.5,
+        "finish_reason": "length",
+        "adherence_passed": false,
+        "response_snippet": "To derive the theoretical variance of the AR(1) process \\( Y_t = \\phi_1 Y_{t-1} + \\epsilon_t \\), we will follow these steps:  ### Step 1: Define the Autocorrelation Function (ACF) The autocorrelation ",
+        "full_response": "To derive the theoretical variance of the AR(1) process \\( Y_t = \\phi_1 Y_{t-1} + \\epsilon_t \\), we will follow these steps:\n\n### Step 1: Define the Autocorrelation Function (ACF)\nThe autocorrelation function (ACF) for an AR(1) process can be derived from its characteristic equation.\n\nFor an AR(1) process:\n\\[ Y_t = \\phi_1 Y_{t-1} + \\epsilon_t \\]\n\nThe characteristic equation is obtained by setting the process equal to itself shifted by one period:\n\\[ Y_t = \\phi_1 Y_{t-1} + \\epsilon_t \\]\n\\[ Y_{t-1} = \\phi_1 Y_{t-2} + \\epsilon_{t-1} \\]\n\nSubstitute into the first equation:\n\\[ \\phi_1 (\\phi_1 Y_{t-2} + \\epsilon_{t-1}) + \\epsilon_t = \\phi_1 Y_{t-1} + \\epsilon_t \\]\n\\[ \\phi_1^2 Y_{t-2} + \\phi_1 \\epsilon_{t-1} + \\epsilon_t = \\phi_1 Y_{t-1} + \\epsilon_t \\]\n\nRearrange terms:\n\\[ \\phi_1^2 Y_{t-2} + \\phi_1 \\epsilon_{t-1} = \\phi_1 Y_{t-1} \\]\n\nThis simplifies to:\n\\[ \\phi_1^2 Y_{t-2} + \\phi_1 \\epsilon_{t-1} = \\phi_1 Y_{t-1} \\]\n\nDivide through by \\( Y_{t-1} \\):\n\\[ \\phi_1^2 \\left(\\frac{Y_{t-2"
+      },
+      {
+        "id": "P4_unsupported_claim_refusal",
+        "category": "Refusal & Hallucination Resistance",
+        "prompt_tokens": 128,
+        "completion_tokens": 171,
+        "latency_ms": 16347.5,
+        "tokens_per_sec": 10.46,
+        "peak_vram_mb": 1118.65,
+        "finish_reason": "stop",
+        "adherence_passed": false,
+        "response_snippet": "The partial autocorrelation function (PACF) for an MA(2) model can be expressed as follows:  \\[ \\phi_1 \\cdot \\phi_2 \\]  where: - \\(\\phi_1\\) is the first-order autoregressive coefficient, - \\(\\phi_2\\) ",
+        "full_response": "The partial autocorrelation function (PACF) for an MA(2) model can be expressed as follows:\n\n\\[ \\phi_1 \\cdot \\phi_2 \\]\n\nwhere:\n- \\(\\phi_1\\) is the first-order autoregressive coefficient,\n- \\(\\phi_2\\) is the second-order autoregressive coefficient.\n\nThis result comes from the fact that the PACF measures the correlation between two lags where one variable has been removed by regressing it against all past values of the other variable. For an MA(2) model, this means considering the relationship between \\(X_t\\) and \\(X_{t-1}\\) while removing the effect of \\(X_{t-2}\\). This results in a product term involving both coefficients \\(\\phi_1\\) and \\(\\phi_2\\)."
+      },
+      {
+        "id": "P5_academic_definition",
+        "category": "Academic Definition & Formal Criteria",
+        "prompt_tokens": 54,
+        "completion_tokens": 210,
+        "latency_ms": 19116.2,
+        "tokens_per_sec": 10.99,
+        "peak_vram_mb": 1117.29,
+        "finish_reason": "stop",
+        "adherence_passed": true,
+        "response_snippet": "A Gaussian white noise process \\( W_t \\) is a stochastic process that satisfies the following conditions:  1. **Zero Mean**: The mean value at any point in time is zero, i.e., \\( E[W_t] = 0 \\). 2. **I",
+        "full_response": "A Gaussian white noise process \\( W_t \\) is a stochastic process that satisfies the following conditions:\n\n1. **Zero Mean**: The mean value at any point in time is zero, i.e., \\( E[W_t] = 0 \\).\n2. **Independent Increments**: For all \\( t_1 < t_2 \\), the increment \\( W_{t_2} - W_{t_1} \\) has a normal distribution with mean zero and variance equal to \\( t_2 - t_1 \\). This means that the increments between different points in time are independent.\n3. **Normal Distribution**: Each increment \\( W_{t_2} - W_{t_1} \\) follows a normal (Gaussian) distribution.\n\nThese properties collectively define a Gaussian white noise process as having a constant mean, normally distributed increments, and independent increments across time. This process is often used in statistical modeling for generating random data or simulating processes where randomness is needed but does not need to be correlated over time."
+      }
+    ]
+  }
+]
