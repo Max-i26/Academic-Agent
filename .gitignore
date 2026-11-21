@@ -27,6 +27,8 @@ dist/
 data/raw/
 data/processed/
 data/knowledge_base/
+data/lancedb/
+*.lance/
 
 # Model caches
 .cache/
