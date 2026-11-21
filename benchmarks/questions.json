@@ -1,0 +1,83 @@
+[
+  {
+    "id": "q1",
+    "question": "What is the formula for Mean Absolute Error (MAE)?",
+    "topic": "Forecasting Accuracy Metrics",
+    "source_lecture": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "expected_concepts": [
+      "MAE = mean(|e_t|)",
+      "average magnitude of errors"
+    ]
+  },
+  {
+    "id": "q2",
+    "question": "What does the smoothing parameter alpha control in Simple Exponential Smoothing?",
+    "topic": "Exponential Smoothing Weights",
+    "source_lecture": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "expected_concepts": [
+      "weighted compromise",
+      "weight assigned to latest observation",
+      "alpha between 0 and 1"
+    ]
+  },
+  {
+    "id": "q3",
+    "question": "When is multiplicative decomposition appropriate compared to additive decomposition?",
+    "topic": "Time Series Decomposition Models",
+    "source_lecture": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "expected_concepts": [
+      "seasonal variation grows with trend level",
+      "proportional seasonal effect"
+    ]
+  },
+  {
+    "id": "q4",
+    "question": "Why is a Centered Moving Average (CMA) used for even-period seasonal data?",
+    "topic": "Moving Average Smoothing",
+    "source_lecture": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "expected_concepts": [
+      "even moving average lies between time periods",
+      "centering aligns with integer time points"
+    ]
+  },
+  {
+    "id": "q5",
+    "question": "What does an ACF spike outside the significance bounds indicate?",
+    "topic": "Autocorrelation Analysis",
+    "source_lecture": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "expected_concepts": [
+      "statistically significant correlation at lag k",
+      "memory or dependency not white noise"
+    ]
+  },
+  {
+    "id": "q6",
+    "question": "What are the core properties of a stationary time series and why is differencing applied?",
+    "topic": "Stationarity and Differencing",
+    "source_lecture": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "expected_concepts": [
+      "constant mean and variance over time",
+      "differencing removes trend and non-stationarity"
+    ]
+  },
+  {
+    "id": "q7",
+    "question": "How does a moving average smooth fluctuations to reveal the underlying trend?",
+    "topic": "Trend Estimation",
+    "source_lecture": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "expected_concepts": [
+      "averages observations over fixed window k",
+      "dampens short-term irregular noise"
+    ]
+  },
+  {
+    "id": "q8",
+    "question": "How does the autocorrelation function (ACF) behave for a series with a strong trend versus pure white noise?",
+    "topic": "Autocorrelation Interpretation",
+    "source_lecture": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "expected_concepts": [
+      "slow exponential decay for trend",
+      "all lags within bounds near zero for white noise"
+    ]
+  }
+]

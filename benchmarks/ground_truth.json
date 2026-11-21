@@ -1,0 +1,74 @@
+[
+  {
+    "question_id": "q1",
+    "question": "What is the formula for Mean Absolute Error (MAE)?",
+    "source_lecture": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "target_chunk_id": "7bcdd909a9a4d4ac",
+    "target_pages": [18],
+    "section_title": "RMSE",
+    "text_preview": "RMSE\n\nMAE =\nmean(|eₜ|)\n\nMSE =\nmean(eₜ²)\n\nRMSE =\n\n√MSE\nBack in original units\n\nEasy to interpret\n\nPenalizes large errors\n\nDS5104 •\n1"
+  },
+  {
+    "question_id": "q2",
+    "question": "What does the smoothing parameter alpha control in Simple Exponential Smoothing?",
+    "source_lecture": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+    "target_chunk_id": "1a71a9327db35525",
+    "target_pages": [7],
+    "section_title": "THE SES EQUATION",
+    "text_preview": "THE SES EQUATION\n\nThe new level is a weighted compromise\n\nSₜ = αYₜ + (1−α)Sₜ₋₁\n\nα = smoothing parameter, 0 < α < 1\n\nYₜ = current observation\n\nSₜ₋₁ = previous smoothed level\n\n1−α = weight on the past level"
+  },
+  {
+    "question_id": "q3",
+    "question": "When is multiplicative decomposition appropriate compared to additive decomposition?",
+    "source_lecture": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "target_chunk_id": "4a6dee1879b3edbb",
+    "target_pages": [8],
+    "section_title": "WHEN Is Multiplicative Suitable?",
+    "text_preview": "WHEN Is Multiplicative Suitable?\n\nSeasonal size grows with level.\nSeason is naturally a percentage.\nFormula: Yₜ = Tₜ ×\nSₜ × Iₜ\n\nDS5104 • Lecture 5 • anupama@foc.sab.ac.lk • Slide 8"
+  },
+  {
+    "question_id": "q4",
+    "question": "Why is a Centered Moving Average (CMA) used for even-period seasonal data?",
+    "source_lecture": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+    "target_chunk_id": "3cba47c636982e5e",
+    "target_pages": [13],
+    "section_title": "Centered Moving Average: Why Center?",
+    "text_preview": "Centered Moving Average: Why Center?\n\nFor quarterly data, seasonal period m = 4.\nA 4-period MA falls between two quarters.\nCMA puts the trend estimate back on a real time point.\n\nCMA = average of two neighboring"
+  },
+  {
+    "question_id": "q5",
+    "question": "What does an ACF spike outside the significance bounds indicate?",
+    "source_lecture": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "target_chunk_id": "d46d67f0d189e61d",
+    "target_pages": [17],
+    "section_title": "Approximate bounds: ± 1.96 /",
+    "text_preview": "Significance Bounds in ACF\n\nApproximate bounds: ± 1.96 /\n\n√n\n\nBars outside bounds may indicate significant autocorrelation.\nUse as a guide, not as the only decision.\nMany lags can create occasional false signals."
+  },
+  {
+    "question_id": "q6",
+    "question": "What are the core properties of a stationary time series and why is differencing applied?",
+    "source_lecture": "6. DS5104 Lecture6 Stationarity_and_Differencing.pdf",
+    "target_chunk_id": "4178df85f5a5aeab",
+    "target_pages": [4],
+    "section_title": "WHY Do We Need Stationarity?",
+    "text_preview": "WHY Do We Need Stationarity?\n\nMany time-series models learn from repeated behaviour.\nIf mean, variance or dependence keeps changing, the model learns an unstable pattern.\nStationarity makes the series more predictable"
+  },
+  {
+    "question_id": "q7",
+    "question": "How does a moving average smooth fluctuations to reveal the underlying trend?",
+    "source_lecture": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+    "target_chunk_id": "c2e9d9ee70aa7089",
+    "target_pages": [6, 7],
+    "section_title": "The main idea",
+    "text_preview": "The main idea\n\nObserved series = Signal + Noise\n\nYₜ = Patternₜ + Random variationₜ\n\nSmoothing tries to estimate the signal.\n\nThen we can ask better questions about trend, seasonality and future\n\nvalues."
+  },
+  {
+    "question_id": "q8",
+    "question": "How does the autocorrelation function (ACF) behave for a series with a strong trend versus pure white noise?",
+    "source_lecture": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+    "target_chunk_id": "a0b64f8cdb5c6bdf",
+    "target_pages": [28],
+    "section_title": "Activity 3 • Match the Case",
+    "text_preview": "Activity 3 • Match the Case\n\nA. Most ACF bars inside bounds.\nB. ACF decays slowly from high positive values.\nC. ACF has repeated spikes every 4 lags.\nMatch: white noise, trend/memory, quarterly seasonality."
+  }
+]

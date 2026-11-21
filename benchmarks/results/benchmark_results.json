@@ -1,0 +1,296 @@
+{
+  "timestamp": "2026-11-21T05:24:39Z",
+  "total_chunks": 236,
+  "total_questions": 8,
+  "gpu_device": "NVIDIA GeForce RTX 2050",
+  "models": {
+    "all-MiniLM-L6-v2": {
+      "repo_id": "sentence-transformers/all-MiniLM-L6-v2",
+      "dimension": 384,
+      "max_sequence_length": 256,
+      "tokenization": {
+        "avg_tokens": 62.148305084745765,
+        "max_tokens": 322,
+        "min_tokens": 9,
+        "chunks_exceeding_256": 1,
+        "chunks_exceeding_512": 0,
+        "query_token_avg": 17.25,
+        "query_token_max": 27
+      },
+      "latency": {
+        "cpu_ms_per_chunk": 58.58088983898316,
+        "cpu_chunks_per_sec": 17.07041328236263,
+        "gpu_ms_per_chunk": 6.14853955084741,
+        "gpu_chunks_per_sec": 162.6402484248763
+      },
+      "memory": {
+        "gpu_peak_allocated_mb": 220.83935546875,
+        "gpu_peak_reserved_mb": 320.0
+      },
+      "retrieval": {
+        "hit_at_1": 0.5,
+        "hit_at_3": 0.75,
+        "mrr": 0.6493055555555556,
+        "mean_separation": 0.024009160697460175,
+        "question_breakdown": [
+          {
+            "question_id": "q1",
+            "question": "What is the formula for Mean Absolute Error (MAE)?",
+            "target_chunk_id": "7bcdd909a9a4d4ac",
+            "target_rank": 1,
+            "hit@1": 1,
+            "hit@3": 1,
+            "reciprocal_rank": 1.0,
+            "target_similarity": 0.6750365495681763,
+            "top_distractor_chunk_id": "2c6fc7699f04aab8",
+            "top_distractor_similarity": 0.557671308517456,
+            "score_separation": 0.11736524105072021,
+            "top_distractor_preview": "MEASURING ACCURACY  Different loss functions punish errors differently  MAE  MSE"
+          },
+          {
+            "question_id": "q2",
+            "question": "What does the smoothing parameter alpha control in Simple Exponential Smoothing?",
+            "target_chunk_id": "1a71a9327db35525",
+            "target_rank": 9,
+            "hit@1": 0,
+            "hit@3": 0,
+            "reciprocal_rank": 0.1111111111111111,
+            "target_similarity": 0.40820229053497314,
+            "top_distractor_chunk_id": "8933e9cdfb78f1bb",
+            "top_distractor_similarity": 0.543700098991394,
+            "score_separation": -0.1354978084564209,
+            "top_distractor_preview": "EXTREME VALUES OF \u03b1  The limits reveal the logic  \u03b1 \u21921 S\u209c \u2248 Y\u209c  \u03b1 \u21920 S\u209c \u2248 S\u209c\u208b\u2081  Almost no  Very heavy  smoothing  smooth"
+          },
+          {
+            "question_id": "q3",
+            "question": "When is multiplicative decomposition appropriate compared to additive decomposition?",
+            "target_chunk_id": "4a6dee1879b3edbb",
+            "target_rank": 3,
+            "hit@1": 0,
+            "hit@3": 1,
+            "reciprocal_rank": 0.3333333333333333,
+            "target_similarity": 0.38081634044647217,
+            "top_distractor_chunk_id": "f2d659fa9a7c362f",
+            "top_distractor_similarity": 0.4875591993331909,
+            "score_separation": -0.10674285888671875,
+            "top_distractor_preview": "WHEN Is Additive Decomposition Suitable?  Seasonal size is roughly constant. Variation does not grow with level. Formula"
+          },
+          {
+            "question_id": "q4",
+            "question": "Why is a Centered Moving Average (CMA) used for even-period seasonal data?",
+            "target_chunk_id": "3cba47c636982e5e",
+            "target_rank": 1,
+            "hit@1": 1,
+            "hit@3": 1,
+            "reciprocal_rank": 1.0,
+            "target_similarity": 0.8585385084152222,
+            "top_distractor_chunk_id": "0b17747940c03c35",
+            "top_distractor_similarity": 0.6168043613433838,
+            "score_separation": 0.24173414707183838,
+            "top_distractor_preview": "For a 3-period centered moving average:  CMA\u209c = (Y\u209c\u208b\u2081 + Y\u209c + Y\u209c\u208a\u2081) / 3  Use it to describe the past, because it needs fu"
+          },
+          {
+            "question_id": "q5",
+            "question": "What does an ACF spike outside the significance bounds indicate?",
+            "target_chunk_id": "d46d67f0d189e61d",
+            "target_rank": 1,
+            "hit@1": 1,
+            "hit@3": 1,
+            "reciprocal_rank": 1.0,
+            "target_similarity": 0.6995987892150879,
+            "top_distractor_chunk_id": "a0b64f8cdb5c6bdf",
+            "top_distractor_similarity": 0.6482658386230469,
+            "score_separation": 0.051332950592041016,
+            "top_distractor_preview": "Activity 3 \u2022 Match the Case  A. Most ACF bars inside bounds. B. ACF decays slowly from high positive values. C. ACF has "
+          },
+          {
+            "question_id": "q6",
+            "question": "What are the core properties of a stationary time series and why is differencing applied?",
+            "target_chunk_id": "4178df85f5a5aeab",
+            "target_rank": 1,
+            "hit@1": 1,
+            "hit@3": 1,
+            "reciprocal_rank": 1.0,
+            "target_similarity": 0.6771857142448425,
+            "top_distractor_chunk_id": "0f721261a5da8e9a",
+            "top_distractor_similarity": 0.6149104237556458,
+            "score_separation": 0.06227529048919678,
+            "top_distractor_preview": "Before and After First Differencing  Original series has trend. Difference series is more stable. This prepares for ARMA"
+          },
+          {
+            "question_id": "q7",
+            "question": "How does a moving average smooth fluctuations to reveal the underlying trend?",
+            "target_chunk_id": "c2e9d9ee70aa7089",
+            "target_rank": 4,
+            "hit@1": 0,
+            "hit@3": 0,
+            "reciprocal_rank": 0.25,
+            "target_similarity": 0.6098884344100952,
+            "top_distractor_chunk_id": "483f11d685a7a61d",
+            "top_distractor_similarity": 0.6308769583702087,
+            "score_separation": -0.020988523960113525,
+            "top_distractor_preview": "WHY THIS?  Real-world data contains:  Smoothing helps us see the underlying movement  \u2022 Measurement error \u2022 Random daily"
+          },
+          {
+            "question_id": "q8",
+            "question": "How does the autocorrelation function (ACF) behave for a series with a strong trend versus pure white noise?",
+            "target_chunk_id": "a0b64f8cdb5c6bdf",
+            "target_rank": 2,
+            "hit@1": 0,
+            "hit@3": 1,
+            "reciprocal_rank": 0.5,
+            "target_similarity": 0.658852219581604,
+            "top_distractor_chunk_id": "bb649a69d546b686",
+            "top_distractor_similarity": 0.6762573719024658,
+            "score_separation": -0.017405152320861816,
+            "top_distractor_preview": "Pattern 1: White-Noise-Like Series  DS5104 \u2022 Lecture 7 \u2022 Autocorrelation & ACF \u2022 anupama@foc.sab.ac.lk \u2022 Slide 18"
+          }
+        ]
+      }
+    },
+    "bge-small-en-v1.5": {
+      "repo_id": "BAAI/bge-small-en-v1.5",
+      "dimension": 384,
+      "max_sequence_length": 512,
+      "tokenization": {
+        "avg_tokens": 62.148305084745765,
+        "max_tokens": 322,
+        "min_tokens": 9,
+        "chunks_exceeding_256": 1,
+        "chunks_exceeding_512": 0,
+        "query_token_avg": 25.25,
+        "query_token_max": 35
+      },
+      "latency": {
+        "cpu_ms_per_chunk": 464.4549966652541,
+        "cpu_chunks_per_sec": 2.153061130098528,
+        "gpu_ms_per_chunk": 8.844393728813653,
+        "gpu_chunks_per_sec": 113.06597497374594
+      },
+      "memory": {
+        "gpu_peak_allocated_mb": 385.162109375,
+        "gpu_peak_reserved_mb": 544.0
+      },
+      "retrieval": {
+        "hit_at_1": 0.375,
+        "hit_at_3": 0.75,
+        "mrr": 0.5402777777777779,
+        "mean_separation": -0.01136808842420578,
+        "question_breakdown": [
+          {
+            "question_id": "q1",
+            "question": "What is the formula for Mean Absolute Error (MAE)?",
+            "target_chunk_id": "7bcdd909a9a4d4ac",
+            "target_rank": 1,
+            "hit@1": 1,
+            "hit@3": 1,
+            "reciprocal_rank": 1.0,
+            "target_similarity": 0.7347368001937866,
+            "top_distractor_chunk_id": "2c6fc7699f04aab8",
+            "top_distractor_similarity": 0.6774927377700806,
+            "score_separation": 0.057244062423706055,
+            "top_distractor_preview": "MEASURING ACCURACY  Different loss functions punish errors differently  MAE  MSE"
+          },
+          {
+            "question_id": "q2",
+            "question": "What does the smoothing parameter alpha control in Simple Exponential Smoothing?",
+            "target_chunk_id": "1a71a9327db35525",
+            "target_rank": 18,
+            "hit@1": 0,
+            "hit@3": 0,
+            "reciprocal_rank": 0.05555555555555555,
+            "target_similarity": 0.640971302986145,
+            "top_distractor_chunk_id": "2da3fc7e534f8b2d",
+            "top_distractor_similarity": 0.7525157928466797,
+            "score_separation": -0.11154448986053467,
+            "top_distractor_preview": "LECTURE 4 Simple Exponential Smoothing (SES)  DS5104 | Time Series Analysis & Forecasting  S\u209c = \u03b1Y\u209c + (1\u2212\u03b1)S\u209c\u208b\u2081  From no"
+          },
+          {
+            "question_id": "q3",
+            "question": "When is multiplicative decomposition appropriate compared to additive decomposition?",
+            "target_chunk_id": "4a6dee1879b3edbb",
+            "target_rank": 10,
+            "hit@1": 0,
+            "hit@3": 0,
+            "reciprocal_rank": 0.1,
+            "target_similarity": 0.6793187856674194,
+            "top_distractor_chunk_id": "1df6344025fcc476",
+            "top_distractor_similarity": 0.78235924243927,
+            "score_separation": -0.10304045677185059,
+            "top_distractor_preview": "Activity 1: Additive or Multiplicative?  Discuss: Why does the log plot look easier to  model?"
+          },
+          {
+            "question_id": "q4",
+            "question": "Why is a Centered Moving Average (CMA) used for even-period seasonal data?",
+            "target_chunk_id": "3cba47c636982e5e",
+            "target_rank": 1,
+            "hit@1": 1,
+            "hit@3": 1,
+            "reciprocal_rank": 1.0,
+            "target_similarity": 0.8316702842712402,
+            "top_distractor_chunk_id": "0b17747940c03c35",
+            "top_distractor_similarity": 0.776057779788971,
+            "score_separation": 0.05561250448226929,
+            "top_distractor_preview": "For a 3-period centered moving average:  CMA\u209c = (Y\u209c\u208b\u2081 + Y\u209c + Y\u209c\u208a\u2081) / 3  Use it to describe the past, because it needs fu"
+          },
+          {
+            "question_id": "q5",
+            "question": "What does an ACF spike outside the significance bounds indicate?",
+            "target_chunk_id": "d46d67f0d189e61d",
+            "target_rank": 1,
+            "hit@1": 1,
+            "hit@3": 1,
+            "reciprocal_rank": 1.0,
+            "target_similarity": 0.8097083568572998,
+            "top_distractor_chunk_id": "e9a21062e873d257",
+            "top_distractor_similarity": 0.7576206922531128,
+            "score_separation": 0.05208766460418701,
+            "top_distractor_preview": "Activity 2 \u2022 Read the ACF Pattern  STUDENT TASK  An ACF has large spikes at lags 12 and"
+          },
+          {
+            "question_id": "q6",
+            "question": "What are the core properties of a stationary time series and why is differencing applied?",
+            "target_chunk_id": "4178df85f5a5aeab",
+            "target_rank": 3,
+            "hit@1": 0,
+            "hit@3": 1,
+            "reciprocal_rank": 0.3333333333333333,
+            "target_similarity": 0.745411217212677,
+            "top_distractor_chunk_id": "015b85c596813f86",
+            "top_distractor_similarity": 0.7716649770736694,
+            "score_separation": -0.02625375986099243,
+            "top_distractor_preview": "WHAT is Stationarity?  A stationary series behaves with a  stable pattern over time.  Stationary-looking  Nonstationary "
+          },
+          {
+            "question_id": "q7",
+            "question": "How does a moving average smooth fluctuations to reveal the underlying trend?",
+            "target_chunk_id": "c2e9d9ee70aa7089",
+            "target_rank": 2,
+            "hit@1": 0,
+            "hit@3": 1,
+            "reciprocal_rank": 0.5,
+            "target_similarity": 0.7777941823005676,
+            "top_distractor_chunk_id": "f9404b0afc6eb5ae",
+            "top_distractor_similarity": 0.7867875099182129,
+            "score_separation": -0.008993327617645264,
+            "top_distractor_preview": "DS5104 Time Series Analysis and Forecasting Lecture 3 Smoothing Methods I  Moving Averages, Noise, and the Hidden Story "
+          },
+          {
+            "question_id": "q8",
+            "question": "How does the autocorrelation function (ACF) behave for a series with a strong trend versus pure white noise?",
+            "target_chunk_id": "a0b64f8cdb5c6bdf",
+            "target_rank": 3,
+            "hit@1": 0,
+            "hit@3": 1,
+            "reciprocal_rank": 0.3333333333333333,
+            "target_similarity": 0.7633096575737,
+            "top_distractor_chunk_id": "77b5f17b91eaaeb1",
+            "top_distractor_similarity": 0.7693665623664856,
+            "score_separation": -0.0060569047927856445,
+            "top_distractor_preview": "Interpretation: Nonstationary Trend Effect  Trending series often have high ACF at many lags. This may be caused by nons"
+          }
+        ]
+      }
+    }
+  }
+}
