@@ -59,6 +59,8 @@ class CitationItem(BaseModel):
     source_file: str = Field(..., description="Source document file name.")
     source_pages: Tuple[int, ...] = Field(default_factory=tuple, description="Relevant source page numbers.")
     excerpt: str = Field(..., description="Exact textual excerpt from the source material.")
+    chunk_id: Optional[str] = Field(default=None, description="Underlying storage chunk ID.")
+    score: Optional[float] = Field(default=None, description="Relevance or retrieval score.")
     unit_ids: Tuple[str, ...] = Field(default_factory=tuple, description="Underlying content unit IDs.")
 
 
@@ -123,6 +125,7 @@ class StreamEvent(BaseModel):
     event_type: StreamEventType = Field(..., description="Category of event.")
     run_id: str = Field(..., description="Associated run ID.")
     timestamp: float = Field(..., description="POSIX timestamp when event was emitted.")
+    schema_version: str = Field(default="1.0", description="Event protocol schema version.")
     step_index: Optional[int] = Field(default=None, description="Associated step index, if step-scoped.")
     payload: Dict[str, Any] = Field(default_factory=dict, description="Event-specific metadata or payload.")
 

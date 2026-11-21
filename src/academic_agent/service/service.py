@@ -57,13 +57,23 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
         run_id: str = "",
         asyncio_loop: Optional[asyncio.AbstractEventLoop] = None,
         asyncio_queue: Optional[asyncio.Queue] = None,
+        max_async_backlog: int = 100,
     ) -> None:
         self.queue = event_queue
         self.run_id = run_id
         self.asyncio_loop = asyncio_loop
         self.asyncio_queue = asyncio_queue
+        self.max_async_backlog = max_async_backlog
         self._step_counter = 0
         self.has_completed = False
+        self._pending_async_callbacks = 0
+        self._backlog_lock = threading.Lock()
+
+    @property
+    def pending_backlog_count(self) -> int:
+        """Return the number of async callbacks currently scheduled or in-flight."""
+        with self._backlog_lock:
+            return self._pending_async_callbacks
 
     def _emit(self, event: Optional[StreamEvent]) -> None:
         """Deliver event to sync queue or async queue bridge with backpressure safety."""
@@ -79,40 +89,59 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
             if self.asyncio_loop.is_closed():
                 return
 
-            def _safe_async_put() -> None:
-                assert self.asyncio_queue is not None
-                try:
-                    self.asyncio_queue.put_nowait(event)
-                except asyncio.QueueFull:
-                    # Guarantee terminal events and sentinel are NEVER dropped under saturation
-                    is_terminal = (
-                        event is None
-                        or (
-                            isinstance(event, StreamEvent)
-                            and event.event_type
-                            in (
-                                StreamEventType.RUN_COMPLETED,
-                                StreamEventType.RUN_FAILED,
-                                StreamEventType.RUN_CANCELLED,
-                            )
-                        )
+            is_terminal = (
+                event is None
+                or (
+                    isinstance(event, StreamEvent)
+                    and event.event_type
+                    in (
+                        StreamEventType.RUN_COMPLETED,
+                        StreamEventType.RUN_FAILED,
+                        StreamEventType.RUN_CANCELLED,
                     )
-                    if is_terminal:
-                        try:
-                            self.asyncio_queue.get_nowait()
-                        except Exception:
-                            pass
-                        try:
-                            self.asyncio_queue.put_nowait(event)
-                        except Exception:
-                            pass
-                    else:
-                        logger.debug("Dropping intermediate telemetry frame due to saturated async queue.")
+                )
+            )
+
+            # Strict producer-level backpressure gate:
+            # Drop intermediate telemetry frames BEFORE calling call_soon_threadsafe
+            # if the event loop's pending callback backlog is saturated.
+            with self._backlog_lock:
+                if not is_terminal and self._pending_async_callbacks >= self.max_async_backlog:
+                    logger.debug(
+                        "Dropping intermediate telemetry frame due to saturated async backlog (%d >= %d).",
+                        self._pending_async_callbacks,
+                        self.max_async_backlog,
+                    )
+                    return
+                self._pending_async_callbacks += 1
+
+            def _safe_async_put() -> None:
+                try:
+                    assert self.asyncio_queue is not None
+                    try:
+                        self.asyncio_queue.put_nowait(event)
+                    except asyncio.QueueFull:
+                        # Guarantee terminal events and sentinel are NEVER dropped under saturation
+                        if is_terminal:
+                            try:
+                                self.asyncio_queue.get_nowait()
+                            except Exception:
+                                pass
+                            try:
+                                self.asyncio_queue.put_nowait(event)
+                            except Exception:
+                                pass
+                        else:
+                            logger.debug("Dropping intermediate telemetry frame due to saturated async queue.")
+                finally:
+                    with self._backlog_lock:
+                        self._pending_async_callbacks = max(0, self._pending_async_callbacks - 1)
 
             try:
                 self.asyncio_loop.call_soon_threadsafe(_safe_async_put)
             except Exception:
-                pass
+                with self._backlog_lock:
+                    self._pending_async_callbacks = max(0, self._pending_async_callbacks - 1)
 
     def on_run_started(self, run_id: str, query: str) -> None:
         event = StreamEvent(
@@ -253,10 +282,13 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
             payload["citations"] = [
                 {
                     "evidence_id": item.evidence_id,
+                    "chunk_id": item.evidence.chunk_id,
+                    "record_id": item.evidence.record_id,
                     "citation_label": item.citation_label,
                     "source_file": item.evidence.source_file,
                     "source_pages": list(item.evidence.source_pages),
                     "excerpt": item.evidence.text,
+                    "score": item.evidence.rerank_score or item.evidence.dense_score or item.evidence.score,
                     "unit_ids": list(item.evidence.source_unit_ids),
                 }
                 for item in trace.final_answer.evidence_context.items
@@ -641,6 +673,8 @@ class AcademicAgentService:
                         source_file=ge.evidence.source_file,
                         source_pages=tuple(ge.evidence.source_pages),
                         excerpt=ge.evidence.text,
+                        chunk_id=ge.evidence.chunk_id,
+                        score=ge.evidence.rerank_score or ge.evidence.dense_score or ge.evidence.score,
                         unit_ids=tuple(ge.evidence.source_unit_ids),
                     )
                 )

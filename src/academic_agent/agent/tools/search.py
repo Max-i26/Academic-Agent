@@ -57,7 +57,12 @@ class AcademicSearchTool(BaseAgentTool):
             filters=filter_obj,
         )
 
-        response = self.pipeline.retrieve(retrieval_query)
+        if hasattr(self.pipeline, "retrieve"):
+            response = self.pipeline.retrieve(retrieval_query)
+        elif hasattr(self.pipeline, "search"):
+            response = self.pipeline.search(retrieval_query)
+        else:
+            raise AttributeError(f"Pipeline {type(self.pipeline)} implements neither 'retrieve' nor 'search'.")
 
         candidates: List[Dict[str, Any]] = []
         for ev in response.evidence:

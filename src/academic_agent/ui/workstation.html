@@ -974,8 +974,8 @@
         if (p.citations && p.citations.length > 0) {
           activeCitations = p.citations.map((c, i) => ({
             citation: c.citation_label || `[Citation ${i + 1}]`,
-            chunk_id: c.evidence_id || `chunk_${i + 1}`,
-            score: 0.95,
+            chunk_id: c.chunk_id || c.evidence_id || `chunk_${i + 1}`,
+            score: c.score !== undefined && c.score !== null ? c.score : 0.95,
             page: (c.source_pages && c.source_pages[0]) || 1,
             title: c.source_file || `Lecture Slide Chunk`,
             excerpt: c.excerpt || "",
@@ -1082,6 +1082,15 @@
       bindCitationPills();
       renderEvidenceList(activeCitations);
       updateInspector(activeCitations[0]);
+
+      // Expose workstation methods to global scope for automated browser testing and XSS auditing
+      window.__academic_agent_workstation = {
+        renderMonograph,
+        appendTelemetryStep,
+        renderEvidenceList,
+        updateInspector,
+        handleRunCompletion,
+      };
     })();
   </script>
 </body>

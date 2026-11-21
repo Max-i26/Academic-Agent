@@ -87,6 +87,8 @@ class RetrievalPipeline:
         else:
             raise ValueError(f"Unsupported retrieval strategy: '{strategy}'")
 
+    retrieve = search
+
     def _search_dense_only(self, query: RetrievalQuery, t_start: float) -> RetrievalResponse:
         """Execute dense-only retrieval pipeline."""
         if self.dense_retriever is None:

@@ -268,19 +268,140 @@ class TestStreamingLifecycleAndRaceElimination:
 
         asyncio.run(_test())
 
-    def test_disconnect_before_worker_registration(self):
-        """Verify that immediate disconnect right at stream initialization cancels the run."""
-        service = build_service_with_delay(delay_sec=0.5)
-        run_id = f"pre_reg_cancel_{uuid.uuid4().hex[:6]}"
+    def test_controlled_disconnect_before_agent_execution_barrier(self):
+        """Verify synchronization barrier: client disconnect cancels worker before agent execution begins."""
+        service = build_service_with_delay(delay_sec=0.05)
+        run_id = f"barrier_cancel_{uuid.uuid4().hex[:6]}"
         req = QueryRequest(query="Explain AR(1) stationarity.", run_id=run_id)
+
+        worker_reached_barrier = threading.Event()
+        release_worker = threading.Event()
+        tools_executed = threading.Event()
+
+        orig_plan = service.agent.planner.plan_next_step
+
+        def barrier_plan(query, history, available_tools, budget_tracker=None):
+            worker_reached_barrier.set()
+            release_worker.wait(timeout=5.0)
+            return orig_plan(query, history, available_tools, budget_tracker=budget_tracker)
+
+        service.agent.planner.plan_next_step = barrier_plan
+
+        orig_dispatch = service.agent.dispatcher.dispatch
+
+        def tracked_dispatch(*args, **kwargs):
+            tools_executed.set()
+            return orig_dispatch(*args, **kwargs)
+
+        service.agent.dispatcher.dispatch = tracked_dispatch
 
         async def _test():
             gen = service.stream_query_async(req)
-            # Before consuming any item, close the async generator (simulating instant disconnect)
+
+            # 1. Begin consuming the stream -> advances generator and spawns worker
+            first_event = await anext(gen)
+            assert first_event.event_type == StreamEventType.RUN_STARTED
+
+            # 2. Confirm the service has reserved the run
+            assert service.is_active(run_id) is True
+            token = service._active_tokens[run_id]
+
+            # 3. Hold the worker at a controlled point before agent execution
+            assert worker_reached_barrier.wait(timeout=3.0) is True
+            assert token.is_cancelled is False
+
+            # 4. Disconnect the consumer
             await gen.aclose()
-            # Worker must be cooperatively cancelled and not remain active
-            await asyncio.sleep(0.3)
+
+            # 5. Assert the token is cancelled by the disconnect finally block
+            assert token.is_cancelled is True
+
+            # 6. Release the worker
+            release_worker.set()
+
+            # Give worker a moment to complete cooperative cancellation
+            await asyncio.sleep(0.1)
+
+            # 7. Assert the agent never performs tool or LLM execution and cleanup happens exactly once
+            assert tools_executed.is_set() is False
             assert service.is_active(run_id) is False
+            assert run_id not in service._active_runs
+            assert run_id in service._completed_runs
+            completed = service.get_run(run_id)
+            assert completed is not None
+            assert completed.status == ServiceRunStatus.CANCELLED or "CANCELLED" in completed.terminal_state
+
+        asyncio.run(_test())
+
+    def test_async_callback_backlog_bounded_under_flood(self):
+        """Verify that pending callbacks scheduled on asyncio loop are bounded and never exceed max_async_backlog."""
+        service = build_service_with_delay(delay_sec=0.0)
+
+        max_observed_backlog = [0]
+        recorded_observer = []
+
+        def flood_telemetry_run(query, cancellation_token, config, run_id, observers=None):
+            if observers:
+                obs = observers[0]
+                recorded_observer.append(obs)
+                for i in range(1000):
+                    obs.on_step_completed(
+                        run_id,
+                        AgentStep(
+                            step_index=i,
+                            state="PLANNING",
+                            proposed_action=ProposedAction(
+                                action_type=ActionType.SEARCH,
+                                rationale=f"Flood step {i}",
+                            ),
+                            token_usage=TokenAccounting(prompt_tokens=1, completion_tokens=0, total_tokens=1),
+                            latency_ms=0.1,
+                        ),
+                    )
+                    cnt = obs.pending_backlog_count
+                    if cnt > max_observed_backlog[0]:
+                        max_observed_backlog[0] = cnt
+
+            trace = AgentTrace(
+                run_id=run_id,
+                query=query,
+                terminal_state=AgentTerminalState.TERMINATED_SUCCESS.value,
+                budget_consumed=BudgetConsumption(
+                    token_usage=TokenAccounting(prompt_tokens=1000, completion_tokens=0, total_tokens=1000),
+                    wall_time_seconds=0.05,
+                ),
+                total_latency_ms=50.0,
+                steps=(),
+                transitions=(),
+            )
+            if observers:
+                for obs in observers:
+                    obs.on_run_completed(run_id, trace)
+            return trace
+
+        service.agent.run = flood_telemetry_run
+
+        async def _test():
+            req = QueryRequest(query="Measure pending async backlog")
+            events = []
+            gen = service.stream_query_async(req)
+            # Read first event then sleep to let producer saturate
+            first = await anext(gen)
+            events.append(first)
+            await asyncio.sleep(0.1)
+
+            async for ev in gen:
+                events.append(ev)
+
+            # Assert the maximum observed pending backlog on producer thread never exceeded max_async_backlog + 2
+            assert recorded_observer, "Observer should have been captured"
+            obs = recorded_observer[0]
+            assert max_observed_backlog[0] <= obs.max_async_backlog + 2, (
+                f"Backlog exceeded bound: {max_observed_backlog[0]} > {obs.max_async_backlog + 2}"
+            )
+            # Terminal delivery guaranteed
+            assert events[-1].event_type == StreamEventType.RUN_COMPLETED
+            assert events[-1].payload["status"] == ServiceRunStatus.COMPLETED.value
 
         asyncio.run(_test())
 
@@ -405,6 +526,8 @@ class TestStreamingLifecycleAndRaceElimination:
         async def _main():
             results = await asyncio.gather(*[_consume_stream(i) for i in range(5)])
             assert len(set(results)) == 5
+            # Give background threads a brief moment to finish thread cleanup
+            await asyncio.sleep(0.1)
             for r_id in results:
                 assert service.is_active(r_id) is False
 

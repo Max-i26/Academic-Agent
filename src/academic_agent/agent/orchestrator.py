@@ -385,7 +385,24 @@ class AcademicAgent(AgentProtocol):
             reason="Invoking Phase 5 grounded synthesizer",
         )
 
-        tool_result = self.dispatcher.dispatch(tool_call, budget_tracker=context.budget_tracker)
+        effective_call = tool_call
+        if not tool_call.arguments.get("evidence_candidates"):
+            accumulated_candidates = []
+            for past_step in context.steps:
+                if past_step.tool_result and isinstance(past_step.tool_result.output, (dict, Mapping)):
+                    cands = past_step.tool_result.output.get("candidates")
+                    if cands and isinstance(cands, (list, tuple)):
+                        accumulated_candidates.extend(cands)
+            if accumulated_candidates:
+                merged_args = dict(tool_call.arguments)
+                merged_args["evidence_candidates"] = accumulated_candidates
+                effective_call = ToolCall(
+                    call_id=tool_call.call_id,
+                    tool_name=tool_call.tool_name,
+                    arguments=merged_args,
+                )
+
+        tool_result = self.dispatcher.dispatch(effective_call, budget_tracker=context.budget_tracker)
         step_latency_ms = (time.perf_counter() - step_start_time) * 1000.0
 
         if tool_result.success and isinstance(tool_result.output, (dict, Mapping)):
