@@ -7,6 +7,10 @@ from academic_agent.storage.providers.lancedb.schema import (
     validate_record_vector,
     records_to_arrow_table,
 )
+from academic_agent.storage.providers.lancedb.filters import (
+    build_lance_filter,
+    ALLOWED_FILTER_FIELDS,
+)
 
 __all__ = [
     "create_lance_schema",
@@ -14,4 +18,6 @@ __all__ = [
     "validate_schema_compatibility",
     "validate_record_vector",
     "records_to_arrow_table",
+    "build_lance_filter",
+    "ALLOWED_FILTER_FIELDS",
 ]
