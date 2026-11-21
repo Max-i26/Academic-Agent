@@ -318,3 +318,41 @@ class TestPolicyOutcomes:
         assert result.outcome == PolicyOutcome.CONTRADICTORY_REFUSAL
         assert result.is_compliant is False
         assert result.has_substantive_continuation is True
+
+    def test_partial_answer_with_fabricated_citation_rejected(self, sample_context, citation_validator):
+        """Adversarial H1/R1: Fabricated citation in partial answer must be rejected as UNSUPPORTED_ANSWER."""
+        validator = AnswerPolicyValidator()
+        text = (
+            "Weak stationarity requires constant mean [E1]. "
+            "However, the lectures do not mention ARCH effects [E99]."
+        )
+        diag = citation_validator.validate(text, sample_context)
+        assert "E99" in diag.invalid_cited_ids
+
+        result = validator.validate_policy(
+            answer_text=text,
+            context=sample_context,
+            diagnostics=diag,
+            sufficiency=EvidenceSufficiency.PARTIALLY_SUFFICIENT,
+        )
+
+        assert result.outcome == PolicyOutcome.UNSUPPORTED_ANSWER
+        assert result.is_compliant is False
+        assert "invalid or fabricated citation IDs" in result.explanation
+
+    def test_clean_refusal_without_gap_statement_under_partial_sufficiency(self, sample_context, citation_validator):
+        """Case C refinement: Clean refusal with no valid citations under partial sufficiency is COMPLIANT_ABSTENTION."""
+        validator = AnswerPolicyValidator()
+        text = "I do not have sufficient information in the provided lectures to answer this question."
+        diag = citation_validator.validate(text, sample_context)
+
+        result = validator.validate_policy(
+            answer_text=text,
+            context=sample_context,
+            diagnostics=diag,
+            sufficiency=EvidenceSufficiency.PARTIALLY_SUFFICIENT,
+        )
+
+        assert result.outcome == PolicyOutcome.COMPLIANT_ABSTENTION
+        assert result.is_compliant is True
+        assert result.refusal_detected is True

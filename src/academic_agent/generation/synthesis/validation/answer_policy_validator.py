@@ -243,8 +243,22 @@ class AnswerPolicyValidator(AnswerPolicyValidatorProtocol):
 
         # Case C: Clean refusal detected without substantive continuation
         if refusal_detected and not has_substantive_continuation:
+            # Rejection guard: fabricated citation IDs always invalidate the response
+            if len(diagnostics.invalid_cited_ids) > 0:
+                return PolicyValidationResult(
+                    outcome=PolicyOutcome.UNSUPPORTED_ANSWER,
+                    refusal_detected=True,
+                    refusal_phrases=refusal_phrases,
+                    has_substantive_continuation=False,
+                    has_gap_statement=has_gap_statement,
+                    is_compliant=False,
+                    explanation=f"Unsupported answer: model cited invalid or fabricated citation IDs {diagnostics.invalid_cited_ids}.",
+                    warnings=warnings,
+                )
+
             if (
                 sufficiency == EvidenceSufficiency.PARTIALLY_SUFFICIENT
+                and has_gap_statement
                 and len(diagnostics.valid_cited_ids) > 0
                 and len(diagnostics.invalid_cited_ids) == 0
             ):
@@ -258,16 +272,30 @@ class AnswerPolicyValidator(AnswerPolicyValidatorProtocol):
                     explanation="Partial answer: supported portions are grounded with citations, and unsupported gaps are explicitly identified.",
                     warnings=warnings,
                 )
-            if sufficiency == EvidenceSufficiency.SUFFICIENT:
-                warnings.append("Model refused to answer despite evidence being assessed as sufficient.")
+
+            if len(diagnostics.valid_cited_ids) == 0:
+                if sufficiency == EvidenceSufficiency.SUFFICIENT:
+                    warnings.append("Model refused to answer despite evidence being assessed as sufficient.")
+                return PolicyValidationResult(
+                    outcome=PolicyOutcome.COMPLIANT_ABSTENTION,
+                    refusal_detected=True,
+                    refusal_phrases=refusal_phrases,
+                    has_substantive_continuation=False,
+                    has_gap_statement=has_gap_statement,
+                    is_compliant=True,
+                    explanation="Compliant abstention: model explicitly refused without making unsupported continuation claims.",
+                    warnings=warnings,
+                )
+
+            # If model has valid citations under partial sufficiency but lacks an explicit gap statement
             return PolicyValidationResult(
-                outcome=PolicyOutcome.COMPLIANT_ABSTENTION,
+                outcome=PolicyOutcome.UNSUPPORTED_ANSWER,
                 refusal_detected=True,
                 refusal_phrases=refusal_phrases,
                 has_substantive_continuation=False,
-                has_gap_statement=has_gap_statement,
-                is_compliant=True,
-                explanation="Compliant abstention: model explicitly refused without making unsupported continuation claims.",
+                has_gap_statement=False,
+                is_compliant=False,
+                explanation="Unsupported answer: partial evidence cited, but model failed to provide a compliant gap statement.",
                 warnings=warnings,
             )
 
@@ -287,11 +315,28 @@ class AnswerPolicyValidator(AnswerPolicyValidatorProtocol):
 
         # Case E: Evidence is PARTIALLY_SUFFICIENT
         if sufficiency == EvidenceSufficiency.PARTIALLY_SUFFICIENT:
-            if has_gap_statement and len(diagnostics.valid_cited_ids) > 0:
+            # Strict citation integrity guard: fabricated citation IDs always invalidate partial answers
+            if len(diagnostics.invalid_cited_ids) > 0:
+                return PolicyValidationResult(
+                    outcome=PolicyOutcome.UNSUPPORTED_ANSWER,
+                    refusal_detected=refusal_detected,
+                    refusal_phrases=refusal_phrases,
+                    has_substantive_continuation=False,
+                    has_gap_statement=has_gap_statement,
+                    is_compliant=False,
+                    explanation=f"Unsupported answer: model cited invalid or fabricated citation IDs {diagnostics.invalid_cited_ids} in partial answer.",
+                    warnings=warnings,
+                )
+
+            if (
+                has_gap_statement
+                and len(diagnostics.valid_cited_ids) > 0
+                and len(diagnostics.invalid_cited_ids) == 0
+            ):
                 return PolicyValidationResult(
                     outcome=PolicyOutcome.PARTIAL_ANSWER,
-                    refusal_detected=False,
-                    refusal_phrases=[],
+                    refusal_detected=refusal_detected,
+                    refusal_phrases=refusal_phrases,
                     has_substantive_continuation=False,
                     has_gap_statement=True,
                     is_compliant=True,
@@ -301,12 +346,12 @@ class AnswerPolicyValidator(AnswerPolicyValidatorProtocol):
             else:
                 return PolicyValidationResult(
                     outcome=PolicyOutcome.UNSUPPORTED_ANSWER,
-                    refusal_detected=False,
-                    refusal_phrases=[],
+                    refusal_detected=refusal_detected,
+                    refusal_phrases=refusal_phrases,
                     has_substantive_continuation=False,
                     has_gap_statement=has_gap_statement,
                     is_compliant=False,
-                    explanation="Unsupported answer: partial evidence was available, but model failed to explicitly identify the unsupported gaps.",
+                    explanation="Unsupported answer: partial evidence was available, but model failed to explicitly identify the unsupported gaps with valid citations.",
                     warnings=warnings,
                 )
 

@@ -518,3 +518,61 @@ class TestBudgetAndOmissionAuditing:
         assert ctx.dropped_candidates_count == 1
         assert ctx.omitted_candidates[0].record_id == "rec_blank#0"
         assert ctx.omitted_candidates[0].reason == OmissionReason.INVALID_CANDIDATE
+
+    def test_provenance_merge_budget_overflow_rollbacked(self, default_query):
+        """R7 rollback safeguard: Duplicate merge exceeding budget must rollback and record BUDGET_EXCEEDED."""
+        ev1 = Evidence(
+            record_id="rec_1#0",
+            chunk_id="c_1",
+            text="Autoregressive models predict future values based on past lags.",
+            source_file="Lecture_1.pdf",
+            source_pages=[1],
+            score=0.95,
+        )
+        # Duplicate text from same source file with many non-contiguous pages to force multi-word expansion
+        ev2 = Evidence(
+            record_id="rec_2#0",
+            chunk_id="c_2",
+            text="Autoregressive models predict future values based on past lags.",
+            source_file="Lecture_1.pdf",
+            source_pages=[3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25],
+            score=0.90,
+        )
+
+        builder = EvidenceContextBuilder(tokenizer=lambda s: len(s.split()))
+        response = RetrievalResponse(query=default_query, evidence=[ev1, ev2])
+
+        # Pre-calculate base package tokens with just ev1
+        base_ctx = builder.build_context(RetrievalResponse(query=default_query, evidence=[ev1]), allocated_evidence_tokens=1000)
+        base_tokens = base_ctx.total_tokens
+
+        # Now set budget to exactly base_tokens so any merge expansion exceeds budget
+        ctx = builder.build_context(response, allocated_evidence_tokens=base_tokens)
+
+        assert len(ctx.items) == 1
+        assert ctx.items[0].source_pages == [1]  # Not expanded to 2..49
+        assert ctx.dropped_candidates_count == 1
+        omitted = ctx.omitted_candidates[0]
+        assert omitted.record_id == "rec_2#0"
+        assert omitted.reason == OmissionReason.BUDGET_EXCEEDED
+        assert "expand evidence package tokens" in omitted.details
+
+    def test_tokenizer_fallback_marks_exactness_false(self, default_query):
+        """M1/R3 exactness tracking: Tokenizer exception marks is_exact_token_count=False."""
+        def failing_tokenizer(s):
+            raise RuntimeError("Tokenizer OOM or failure simulation")
+
+        builder = EvidenceContextBuilder(tokenizer=failing_tokenizer)
+        ev = Evidence(
+            record_id="rec_1#0",
+            chunk_id="c_1",
+            text="Stationarity is required.",
+            source_file="Lecture_1.pdf",
+            source_pages=[1],
+            score=0.90,
+        )
+        response = RetrievalResponse(query=default_query, evidence=[ev])
+        ctx = builder.build_context(response, allocated_evidence_tokens=1000)
+
+        assert len(ctx.items) == 1
+        assert ctx.is_exact_token_count is False

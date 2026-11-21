@@ -97,8 +97,10 @@ class EvidenceContextBuilder(EvidenceContextBuilderProtocol):
             except Exception as e:
                 logger.warning(f"Injected tokenizer failed on text ({e}); falling back to heuristic.")
 
-        # Heuristic fallback: ~3 characters per token + 4 tokens overhead for XML formatting
-        est_tokens = max(1, int(len(text) / 3.0) + 4)
+        # Heuristic fallback: conservative bounds for academic and LaTeX text
+        words = len(text.split())
+        chars = len(text)
+        est_tokens = max(1, max(int(chars / 2.8), int(words * 1.35)) + 4)
         return est_tokens, False
 
     def build_context(
@@ -190,6 +192,7 @@ class EvidenceContextBuilder(EvidenceContextBuilderProtocol):
                 if cand.record_id == acc_item.evidence.record_id:
                     if cand.source_file == acc_item.source_file and norm_cand_text == acc_norm_text:
                         # Genuine duplicate record with identical source file and text -> merge pages
+                        original_ge = acc_item
                         merged_pages = sorted(list(set(acc_item.source_pages) | set(cand.source_pages)))
                         merged_units = sorted(list(set(acc_item.evidence.source_unit_ids) | set(cand.source_unit_ids)))
                         updated_ev = acc_item.evidence.model_copy(
@@ -203,7 +206,35 @@ class EvidenceContextBuilder(EvidenceContextBuilderProtocol):
                             is_truncated=acc_item.is_truncated,
                         )
                         item_xml = self.formatter.format_item(updated_ge)
-                        updated_ge.token_count, _ = self.count_tokens(item_xml)
+                        updated_ge.token_count, c_exact = self.count_tokens(item_xml)
+                        if not c_exact:
+                            is_exact = False
+
+                        # Tentatively test merged package budget
+                        accepted[acc_idx] = updated_ge
+                        pkg_xml = self.formatter.format_evidence_block(EvidenceContext(items=accepted))
+                        merged_package_tokens, pkg_exact = self.count_tokens(pkg_xml)
+                        if not pkg_exact:
+                            is_exact = False
+
+                        if merged_package_tokens > allocated_evidence_tokens:
+                            # Rollback merge: page expansion would exceed budget
+                            accepted[acc_idx] = original_ge
+                            omitted.append(
+                                OmittedCandidate(
+                                    record_id=cand.record_id,
+                                    chunk_id=cand.chunk_id,
+                                    source_file=cand.source_file,
+                                    source_pages=cand.source_pages,
+                                    reason=OmissionReason.BUDGET_EXCEEDED,
+                                    details=f"Provenance merge would expand evidence package tokens ({merged_package_tokens}) beyond budget ({allocated_evidence_tokens})",
+                                    rank=rank,
+                                )
+                            )
+                            is_duplicate = True
+                            break
+
+                        current_package_tokens = merged_package_tokens
                         accepted[acc_idx] = updated_ge
 
                         omitted.append(
@@ -240,6 +271,7 @@ class EvidenceContextBuilder(EvidenceContextBuilderProtocol):
 
                 # Check 2b: Matching text from identical source file
                 if norm_cand_text == acc_norm_text and cand.source_file == acc_item.source_file:
+                    original_ge = acc_item
                     merged_pages = sorted(list(set(acc_item.source_pages) | set(cand.source_pages)))
                     merged_units = sorted(list(set(acc_item.evidence.source_unit_ids) | set(cand.source_unit_ids)))
                     updated_ev = acc_item.evidence.model_copy(
@@ -253,7 +285,35 @@ class EvidenceContextBuilder(EvidenceContextBuilderProtocol):
                         is_truncated=acc_item.is_truncated,
                     )
                     item_xml = self.formatter.format_item(updated_ge)
-                    updated_ge.token_count, _ = self.count_tokens(item_xml)
+                    updated_ge.token_count, c_exact = self.count_tokens(item_xml)
+                    if not c_exact:
+                        is_exact = False
+
+                    # Tentatively test merged package budget
+                    accepted[acc_idx] = updated_ge
+                    pkg_xml = self.formatter.format_evidence_block(EvidenceContext(items=accepted))
+                    merged_package_tokens, pkg_exact = self.count_tokens(pkg_xml)
+                    if not pkg_exact:
+                        is_exact = False
+
+                    if merged_package_tokens > allocated_evidence_tokens:
+                        # Rollback merge: page expansion would exceed budget
+                        accepted[acc_idx] = original_ge
+                        omitted.append(
+                            OmittedCandidate(
+                                record_id=cand.record_id,
+                                chunk_id=cand.chunk_id,
+                                source_file=cand.source_file,
+                                source_pages=cand.source_pages,
+                                reason=OmissionReason.BUDGET_EXCEEDED,
+                                details=f"Provenance merge would expand evidence package tokens ({merged_package_tokens}) beyond budget ({allocated_evidence_tokens})",
+                                rank=rank,
+                            )
+                        )
+                        is_duplicate = True
+                        break
+
+                    current_package_tokens = merged_package_tokens
                     accepted[acc_idx] = updated_ge
 
                     omitted.append(
@@ -271,9 +331,6 @@ class EvidenceContextBuilder(EvidenceContextBuilderProtocol):
                     break
 
             if is_duplicate:
-                # Recalculate package tokens if pages were merged
-                pkg_xml = self.formatter.format_evidence_block(EvidenceContext(items=accepted))
-                current_package_tokens, _ = self.count_tokens(pkg_xml)
                 continue
 
             # Check 3: Sequence-aware n-gram overlap within same source file
@@ -303,6 +360,7 @@ class EvidenceContextBuilder(EvidenceContextBuilderProtocol):
                     overlap_ratio = max(ratio_cand, ratio_acc)
 
                     if overlap_ratio >= self.overlap_threshold:
+                        original_ge = acc_item
                         merged_pages = sorted(list(set(acc_item.source_pages) | set(cand.source_pages)))
                         merged_units = sorted(list(set(acc_item.evidence.source_unit_ids) | set(cand.source_unit_ids)))
                         updated_ev = acc_item.evidence.model_copy(
@@ -316,7 +374,35 @@ class EvidenceContextBuilder(EvidenceContextBuilderProtocol):
                             is_truncated=acc_item.is_truncated,
                         )
                         item_xml = self.formatter.format_item(updated_ge)
-                        updated_ge.token_count, _ = self.count_tokens(item_xml)
+                        updated_ge.token_count, c_exact = self.count_tokens(item_xml)
+                        if not c_exact:
+                            is_exact = False
+
+                        # Tentatively test merged package budget
+                        accepted[acc_idx] = updated_ge
+                        pkg_xml = self.formatter.format_evidence_block(EvidenceContext(items=accepted))
+                        merged_package_tokens, pkg_exact = self.count_tokens(pkg_xml)
+                        if not pkg_exact:
+                            is_exact = False
+
+                        if merged_package_tokens > allocated_evidence_tokens:
+                            # Rollback merge: page expansion would exceed budget
+                            accepted[acc_idx] = original_ge
+                            omitted.append(
+                                OmittedCandidate(
+                                    record_id=cand.record_id,
+                                    chunk_id=cand.chunk_id,
+                                    source_file=cand.source_file,
+                                    source_pages=cand.source_pages,
+                                    reason=OmissionReason.BUDGET_EXCEEDED,
+                                    details=f"Provenance merge would expand evidence package tokens ({merged_package_tokens}) beyond budget ({allocated_evidence_tokens})",
+                                    rank=rank,
+                                )
+                            )
+                            is_overlapping = True
+                            break
+
+                        current_package_tokens = merged_package_tokens
                         accepted[acc_idx] = updated_ge
 
                         omitted.append(
@@ -334,9 +420,6 @@ class EvidenceContextBuilder(EvidenceContextBuilderProtocol):
                         break
 
             if is_overlapping:
-                # Recalculate package tokens if pages were merged
-                pkg_xml = self.formatter.format_evidence_block(EvidenceContext(items=accepted))
-                current_package_tokens, _ = self.count_tokens(pkg_xml)
                 continue
 
             # Check 4: Tentative Budget Packing (Rank-monotonic full package accounting)
@@ -348,12 +431,16 @@ class EvidenceContextBuilder(EvidenceContextBuilderProtocol):
             tentative_xml = self.formatter.format_evidence_block(
                 EvidenceContext(items=accepted + [tentative_ge])
             )
-            tentative_tokens, _ = self.count_tokens(tentative_xml)
+            tentative_tokens, c_exact1 = self.count_tokens(tentative_xml)
+            if not c_exact1:
+                is_exact = False
 
             if tentative_tokens <= allocated_evidence_tokens:
                 # Candidate fits safely within budget
                 item_xml = self.formatter.format_item(tentative_ge)
-                tentative_ge.token_count, _ = self.count_tokens(item_xml)
+                tentative_ge.token_count, c_exact2 = self.count_tokens(item_xml)
+                if not c_exact2:
+                    is_exact = False
                 accepted.append(tentative_ge)
                 current_package_tokens = tentative_tokens
             else:
