@@ -1,26 +1,101 @@
 {
-  "health_check": {
-    "status_code": 200,
-    "version": "0.1.0",
-    "latency_ms": 45.94
-  },
   "workstation_ui": {
     "status_code": 200,
-    "html_bytes": 64540,
-    "dom_safe": true,
-    "zero_inner_html": true
+    "latency_ms": 181.1,
+    "content_length_bytes": 64540,
+    "inner_html_present": false,
+    "dom_safe": true
   },
-  "sync_query": {
-    "run_id": "1fd5a5a0-5e42-42b9-89fa-9d88244d0310",
-    "status": "completed",
+  "health_check": {
+    "status": "ok",
+    "service": "academic-agent",
+    "version": "0.1.0",
+    "active_runs": 0,
+    "registered_tools": [
+      "academic_search",
+      "academic_synthesizer"
+    ]
+  },
+  "physical_user_journey": {
+    "status": "PASSED",
+    "query": "What is the Simple Exponential Smoothing level equation?",
+    "run_id": "8ca5313b-ff1d-4557-bf23-075a91422abe",
+    "latency_ms": 31325.69,
+    "service_status": "abstention",
     "total_steps": 2,
-    "step_summaries_count": 2,
-    "latency_ms": 27.91,
-    "answer_text": "An autoregressive process of order 1, AR(1), is weakly stationary if and only if the roots of its characteristic polynomial lie strictly outside the unit circle, which requires |phi_1| < 1 [Lecture 4, p. 18]."
+    "answer_text": "The Simple Exponential Smoothing (SES) level equation is given by \\( S\u209c = \u03b1Y\u209c + (1-\u03b1)S\u209c\u208b\u2081 \\), where \\( \u03b1 \\) is the smoothing parameter, \\( Y\u209c \\) represents the current observation, and \\( S\u209c\u208b\u2081 \\) is the previous smoothed level. The equation reflects how the current level \\( S\u209c \\) is a weighted average of the current observation \\( Y\u209c \\) and the previous smoothed level \\( S\u209c\u208b\u2081 \\). The weights depend on the value of \\( \u03b1 \\): when \\( \u03b1 = 1 \\), the equation simplifies to \\( S\u209c = Y\u209c \\), indicating no smoothing, while for \\( \u03b1 = 0 \\), it becomes \\( S\u209c = S\u209c\u208b\u2081 \\), representing complete smoothing.",
+    "citations": [
+      {
+        "evidence_id": "E1",
+        "citation_label": "[Lecture 4, p. 6]",
+        "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+        "source_pages": [
+          6
+        ],
+        "excerpt": "WHAT IS \u201cSMOOTHING\u201d?\n\nSeparate the underlying level from short-term noise\n\nObserved value\n\n= Level + Noise\n\nSmoothing estimates the\n\nlevel.\n\n6",
+        "chunk_id": "16a82ec38f734fe8",
+        "score": 0.6053,
+        "unit_ids": []
+      },
+      {
+        "evidence_id": "E2",
+        "citation_label": "[Lecture 3, p. 22]",
+        "source_file": "3. DS5104 Lecture3 Smoothing_Methods_I.pdf",
+        "source_pages": [
+          22
+        ],
+        "excerpt": "Theory: smoothing as a linear filter\n\nGeneral form:\n\nS\u209c = a\u2080Y\u209c + a\u2081Y\u209c\u208b\u2081 + a\u2082Y\u209c\u208b\u2082 + \u22ef\n\nwhere the weights usually add to 1.\n\nSimple MA is the special case where all included weights are\n\nequal.",
+        "chunk_id": "6667c4702d2e9f8e",
+        "score": 0.5604,
+        "unit_ids": []
+      },
+      {
+        "evidence_id": "E3",
+        "citation_label": "[Lecture 4, p. 7]",
+        "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+        "source_pages": [
+          7
+        ],
+        "excerpt": "THE SES EQUATION\n\nThe new level is a weighted compromise\n\nS\u209c = \u03b1Y\u209c + (1\u2212\u03b1)S\u209c\u208b\u2081\n\n\u03b1 = smoothing parameter, 0 < \u03b1 < 1\n\nY\u209c = current observation\n\nS\u209c\u208b\u2081 = previous smoothed level\n\n1\u2212\u03b1 = weight on the past level\n\nThe two weights always add to 1.\n\n7",
+        "chunk_id": "1a71a9327db35525",
+        "score": 0.547,
+        "unit_ids": []
+      },
+      {
+        "evidence_id": "E4",
+        "citation_label": "[Lecture 4, p. 1]",
+        "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+        "source_pages": [
+          1
+        ],
+        "excerpt": "LECTURE 4\nSimple Exponential Smoothing (SES)\n\nDS5104 | Time Series Analysis & Forecasting\n\nS\u209c = \u03b1Y\u209c + (1\u2212\u03b1)S\u209c\u208b\u2081\n\nFrom noisy demand to a forecast\n\nanupama@foc.sab.ac.lk",
+        "chunk_id": "2da3fc7e534f8b2d",
+        "score": 0.4708,
+        "unit_ids": []
+      },
+      {
+        "evidence_id": "E5",
+        "citation_label": "[Lecture 4, p. 9]",
+        "source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+        "source_pages": [
+          9
+        ],
+        "excerpt": "WHY IS IT CALLED \u201cEXPONENTIAL\u201d?\n\nUnfold the recursion\n\nS\u209c = \u03b1Y\u209c + (1\u2212\u03b1)S\u209c\u208b\u2081\n\nS\u209c\u208b\u2081 = \u03b1Y\u209c\u208b\u2081 + (1\u2212\u03b1)S\u209c\u208b\u2082\n\nTherefore:\n\nS\u209c = \u03b1Y\u209c + \u03b1(1\u2212\u03b1)Y\u209c\u208b\u2081 + \u03b1(1\u2212\u03b1)\u00b2Y\u209c\u208b\u2082 + \u2026\n\nOlder observations receive exponentially\n\ndecreasing weights.\n\n9",
+        "chunk_id": "c00f99f1fddd55e4",
+        "score": 0.4365,
+        "unit_ids": []
+      }
+    ],
+    "steps": [
+      "SEARCH",
+      "SYNTHESIZE"
+    ]
   },
-  "sse_streaming": {
-    "event_count": 7,
-    "events_sequence": [
+  "sse_streaming_journey": {
+    "status": "PASSED",
+    "latency_ms": 12387.86,
+    "frame_count": 7,
+    "event_sequence": [
       "run_started",
       "tool_completed",
       "step_completed",
@@ -29,12 +104,24 @@
       "step_completed",
       "run_completed"
     ],
-    "latency_ms": 37.57,
-    "terminal_event_received": true
+    "terminal_state": "TERMINATED_ABSTENTION"
   },
-  "run_management": {
-    "total_runs_listed": 2,
-    "retrieved_single_run": true,
-    "idempotent_cancellation": true
+  "cancellation_handling": {
+    "status": "PASSED",
+    "existing_run_cancel_status": 200,
+    "non_existent_run_cancel_status": 200,
+    "non_existent_run_get_status": 404
+  },
+  "run_history": {
+    "total_runs_retrieved": 2,
+    "single_run_verified": true
+  },
+  "corpus_and_resource_integrity": {
+    "status": "PASSED",
+    "initial_lancedb_count": 238,
+    "final_lancedb_count": 238,
+    "invariant_preserved": true,
+    "final_allocated_vram_mb": 0.001,
+    "vram_released_cleanly": true
   }
 }
