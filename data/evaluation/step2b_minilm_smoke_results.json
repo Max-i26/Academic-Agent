@@ -1,0 +1,57 @@
+{
+  "load_time_ms": 4269.79,
+  "device_used": "cuda",
+  "peak_gpu_mem_load_mb": 86.65,
+  "embedding_shape": [
+    5,
+    384
+  ],
+  "cuda_latency_ms": 8213.56,
+  "cpu_latency_ms": 2021.17,
+  "peak_gpu_mem_embed_mb": 87.85,
+  "norm_min": 1.0,
+  "norm_max": 1.0,
+  "cuda_cpu_max_diff": 1.7136335372924805e-07,
+  "cuda_cpu_min_cos_sim": 0.9999999999996704,
+  "determinism_diff": 0.0,
+  "retrieval_verified": true,
+  "retrieval_cases": [
+    {
+      "case": 1,
+      "query": "Simple exponential smoothing parameter alpha and level equation",
+      "top_chunk_id": "1a71a9327db35525",
+      "top_source_file": "4. DS5104 Lecture4 Simple_Exponential_Smoothing.pdf",
+      "top_source_pages": [
+        7
+      ],
+      "top_similarity_score": 0.551,
+      "citation": "[Lecture 4, p. 7]",
+      "snippet": "THE SES EQUATION  The new level is a weighted compromise  S\u209c = \u03b1Y\u209c + (1\u2212\u03b1)S\u209c\u208b\u2081  \u03b1 = smoothing parameter, 0 < \u03b1 < 1  Y\u209c =..."
+    },
+    {
+      "case": 2,
+      "query": "Autocorrelation function ACF and sample correlogram r_k",
+      "top_chunk_id": "be05c7129ce1e2f0",
+      "top_source_file": "7. DS5104 Lecture7 Autocorrelation ACF.pdf",
+      "top_source_pages": [
+        1
+      ],
+      "top_similarity_score": 0.6186,
+      "citation": "[Lecture 7, p. 1]",
+      "snippet": "\u2192ACF \u2192CORRELOGRAM  DS5104 \u2022 Lecture 7 \u2022 Autocorrelation & ACF \u2022 anupama@foc.sab.ac.lk \u2022 Slide 1..."
+    },
+    {
+      "case": 3,
+      "query": "Additive and multiplicative trend seasonal decomposition",
+      "top_chunk_id": "2d9b93188049ad2e",
+      "top_source_file": "5. DS5104 Lecture5 Trend_Seasonal_Decomposition.pdf",
+      "top_source_pages": [
+        11
+      ],
+      "top_similarity_score": 0.6329,
+      "citation": "[Lecture 5, p. 11]",
+      "snippet": "Activity 1 \u2022 Suggested Answer  A. Additive: seasonal size is similar each year. B. Multiplicative: seasonal effect grows..."
+    }
+  ],
+  "table_count_verified": 238
+}

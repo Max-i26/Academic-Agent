@@ -1,0 +1,40 @@
+{
+  "health_check": {
+    "status_code": 200,
+    "version": "0.1.0",
+    "latency_ms": 45.94
+  },
+  "workstation_ui": {
+    "status_code": 200,
+    "html_bytes": 64540,
+    "dom_safe": true,
+    "zero_inner_html": true
+  },
+  "sync_query": {
+    "run_id": "1fd5a5a0-5e42-42b9-89fa-9d88244d0310",
+    "status": "completed",
+    "total_steps": 2,
+    "step_summaries_count": 2,
+    "latency_ms": 27.91,
+    "answer_text": "An autoregressive process of order 1, AR(1), is weakly stationary if and only if the roots of its characteristic polynomial lie strictly outside the unit circle, which requires |phi_1| < 1 [Lecture 4, p. 18]."
+  },
+  "sse_streaming": {
+    "event_count": 7,
+    "events_sequence": [
+      "run_started",
+      "tool_completed",
+      "step_completed",
+      "tool_completed",
+      "synthesis_started",
+      "step_completed",
+      "run_completed"
+    ],
+    "latency_ms": 37.57,
+    "terminal_event_received": true
+  },
+  "run_management": {
+    "total_runs_listed": 2,
+    "retrieved_single_run": true,
+    "idempotent_cancellation": true
+  }
+}
