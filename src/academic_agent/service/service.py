@@ -282,7 +282,14 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
             "duration_ms": trace.total_latency_ms,
         }
 
-        if trace.final_answer is not None:
+        is_accepted = (
+            trace.terminal_state == AgentTerminalState.TERMINATED_SUCCESS.value
+            and trace.final_answer is not None
+            and getattr(trace.final_answer, "is_policy_compliant", True)
+        )
+
+        if is_accepted:
+            assert trace.final_answer is not None
             payload["answer_text"] = trace.final_answer.resolved_answer_text
             payload["citation_labels"] = [
                 item.citation_label for item in trace.final_answer.evidence_context.items
@@ -313,8 +320,12 @@ class _StreamingObserver(AgentLifecycleObserverProtocol):
                 }
                 for item in trace.final_answer.evidence_context.items
             ]
-        elif trace.refusal_explanation is not None:
-            payload["refusal_explanation"] = trace.refusal_explanation
+        else:
+            payload["answer_text"] = None
+            payload["refusal_explanation"] = trace.refusal_explanation or terminal_reason or "Execution concluded without an accepted answer."
+            payload["citation_labels"] = []
+            payload["citations"] = []
+            payload["evidence_items"] = []
 
         completion_event = StreamEvent(
             event_id=str(uuid.uuid4()),
@@ -668,7 +679,14 @@ class AcademicAgentService:
         evidence_items: List[EvidenceItem] = []
         omitted_count = 0
 
-        if trace.final_answer is not None:
+        is_accepted = (
+            trace.terminal_state == AgentTerminalState.TERMINATED_SUCCESS.value
+            and trace.final_answer is not None
+            and getattr(trace.final_answer, "is_policy_compliant", True)
+        )
+
+        if is_accepted:
+            assert trace.final_answer is not None
             answer_text = trace.final_answer.resolved_answer_text
             raw_answer_text = trace.final_answer.answer_text
             ctx = trace.final_answer.evidence_context
@@ -699,7 +717,11 @@ class AcademicAgentService:
                 )
             omitted_count = ctx.dropped_candidates_count
         else:
-            answer_text = trace.refusal_explanation or "No answer synthesized."
+            answer_text = trace.refusal_explanation or terminal_reason or "No answer synthesized."
+            raw_answer_text = None
+            citation_items = []
+            evidence_items = []
+            omitted_count = 0
 
         # 3. Build step summaries
         step_summaries: List[TraceStepSummary] = []

@@ -231,7 +231,7 @@ async def health_check(
         return HealthResponse(
             status="ok",
             service="academic-agent",
-            version="0.1.0",
+            version="0.1.1",
             active_runs=active_count,
             registered_tools=tools,
         )

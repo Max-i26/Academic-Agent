@@ -782,3 +782,138 @@ class TestServiceHardening:
 
         asyncio.run(_test())
 
+
+# ============================================================================
+# Tests: Policy Leak Prevention (v0.1.1 Maintenance Freeze)
+# ============================================================================
+
+class TestPolicyLeakPrevention:
+    """Verifies that ungrounded or policy-rejected synthesis answers are never leaked as accepted."""
+
+    def test_unsupported_synthesis_answer_is_not_leaked_in_query_response(self, mock_agent_service):
+        """When synthesizer generates an answer that policy rejects as UNSUPPORTED_ANSWER,
+        QueryResponse must report ABSTENTION, contain no citations, and omit the ungrounded text."""
+        orig_run = mock_agent_service.agent.run
+
+        unsupported_answer = AcademicAnswer(
+            query="What is Paxos consensus?",
+            answer_text="Paxos is a distributed consensus algorithm invented by Leslie Lamport.",
+            resolved_answer_text="Paxos is a distributed consensus algorithm invented by Leslie Lamport.",
+            evidence_context=EvidenceContext(items=()),
+            citation_occurrences=(),
+            validation=ValidationDiagnostics(
+                valid_cited_ids=(),
+                invalid_cited_ids=(),
+                malformed_citations=(),
+                has_valid_citation_integrity=True,
+            ),
+            policy_result=PolicyValidationResult(
+                outcome=PolicyOutcome.UNSUPPORTED_ANSWER,
+                is_compliant=False,
+                explanation="Unsupported answer: model made claims despite empty evidence context.",
+            ),
+            raw_response=LLMResponse(
+                content="Paxos is a distributed consensus algorithm invented by Leslie Lamport.",
+                role=MessageRole.ASSISTANT,
+                model_name="mock-synthesizer",
+                latency_ms=10.0,
+            ),
+            model_name="mock-synthesizer",
+            latency_ms=10.0,
+        )
+
+        def mock_unsupported_run(query, **kwargs):
+            return AgentTrace(
+                run_id=kwargs.get("run_id", "test_unsupported_run"),
+                query=query,
+                terminal_state=AgentTerminalState.TERMINATED_ABSTENTION.value,
+                refusal_explanation="Synthesizer generated claims unsupported by retrieved evidence.",
+                final_answer=unsupported_answer,
+                steps=(),
+            )
+
+        mock_agent_service.agent.run = mock_unsupported_run
+        try:
+            req = QueryRequest(query="What is Paxos consensus?")
+            resp = mock_agent_service.run_query(req)
+
+            assert resp.status == ServiceRunStatus.ABSTENTION
+            assert resp.terminal_state == AgentTerminalState.TERMINATED_ABSTENTION.value
+            # The ungrounded answer text must NOT appear as the accepted answer
+            assert "Leslie Lamport" not in (resp.answer_text or "")
+            assert resp.raw_answer_text is None
+            assert len(resp.citations) == 0
+            assert len(resp.evidence_items) == 0
+            assert "unsupported" in (resp.answer_text or "").lower() or "unsupported" in resp.terminal_reason.lower()
+        finally:
+            mock_agent_service.agent.run = orig_run
+
+    def test_unsupported_synthesis_answer_is_not_leaked_in_streaming_event(self, mock_agent_service):
+        """When synthesizer generates an ungrounded answer, SSE RUN_COMPLETED event must
+        set answer_text to None, provide refusal_explanation, and contain zero citations."""
+        import asyncio
+
+        unsupported_answer = AcademicAnswer(
+            query="What is Paxos consensus?",
+            answer_text="Paxos is a distributed consensus algorithm invented by Leslie Lamport.",
+            resolved_answer_text="Paxos is a distributed consensus algorithm invented by Leslie Lamport.",
+            evidence_context=EvidenceContext(items=()),
+            citation_occurrences=(),
+            validation=ValidationDiagnostics(
+                valid_cited_ids=(),
+                invalid_cited_ids=(),
+                malformed_citations=(),
+                has_valid_citation_integrity=True,
+            ),
+            policy_result=PolicyValidationResult(
+                outcome=PolicyOutcome.UNSUPPORTED_ANSWER,
+                is_compliant=False,
+                explanation="Unsupported answer: model made claims despite empty evidence context.",
+            ),
+            raw_response=LLMResponse(
+                content="Paxos is a distributed consensus algorithm invented by Leslie Lamport.",
+                role=MessageRole.ASSISTANT,
+                model_name="mock-synthesizer",
+                latency_ms=10.0,
+            ),
+            model_name="mock-synthesizer",
+            latency_ms=10.0,
+        )
+
+        def mock_unsupported_run(query, observers=None, **kwargs):
+            trace = AgentTrace(
+                run_id=kwargs.get("run_id", "test_stream_unsupported"),
+                query=query,
+                terminal_state=AgentTerminalState.TERMINATED_ABSTENTION.value,
+                refusal_explanation="Synthesizer generated claims unsupported by retrieved evidence.",
+                final_answer=unsupported_answer,
+                steps=(),
+            )
+            if observers:
+                for obs in observers:
+                    obs.on_run_completed(trace.run_id, trace)
+            return trace
+
+        orig_run = mock_agent_service.agent.run
+        mock_agent_service.agent.run = mock_unsupported_run
+        try:
+            async def _test():
+                req = QueryRequest(query="What is Paxos consensus?")
+                events = []
+                async for ev in mock_agent_service.stream_query_async(req):
+                    events.append(ev)
+
+                assert len(events) >= 1
+                completed_event = events[-1]
+                assert completed_event.event_type == StreamEventType.RUN_COMPLETED
+                payload = completed_event.payload
+                assert payload["status"] == ServiceRunStatus.ABSTENTION.value
+                assert payload.get("answer_text") is None
+                assert "unsupported" in payload.get("refusal_explanation", "").lower()
+                assert len(payload.get("citations", [])) == 0
+                assert len(payload.get("citation_labels", [])) == 0
+
+            asyncio.run(_test())
+        finally:
+            mock_agent_service.agent.run = orig_run
+

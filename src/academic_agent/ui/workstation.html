@@ -970,8 +970,8 @@
 
         telemetrySummary.textContent = `${p.total_steps || 1} FSM Transitions • ${p.total_tokens || 0} tokens • ${Math.round(p.duration_ms || 0)}ms latency`;
 
-        // Update citations and evidence list from SSE payload or previous state
-        if (p.citations && p.citations.length > 0) {
+        // Update citations and evidence list ONLY for accepted successful runs
+        if (isSuccess && p.citations && p.citations.length > 0) {
           activeCitations = p.citations.map((c, i) => ({
             citation: c.citation_label || `[Citation ${i + 1}]`,
             chunk_id: c.chunk_id || c.evidence_id || `chunk_${i + 1}`,
@@ -983,7 +983,7 @@
           }));
           renderEvidenceList(activeCitations);
           updateInspector(activeCitations[0]);
-        } else if (p.evidence_items && p.evidence_items.length > 0) {
+        } else if (isSuccess && p.evidence_items && p.evidence_items.length > 0) {
           activeCitations = p.evidence_items.map((ev, i) => ({
             citation: `[Evidence ${i + 1}]`,
             chunk_id: ev.chunk_id || ev.record_id || `chunk_${i + 1}`,
@@ -995,22 +995,31 @@
           }));
           renderEvidenceList(activeCitations);
           updateInspector(activeCitations[0]);
+        } else {
+          activeCitations = [];
+          evidenceList.textContent = "";
+          const emptyEvItem = document.createElement("div");
+          emptyEvItem.className = "p-space-md text-on-surface-variant text-body-sm font-label-code text-center";
+          emptyEvItem.textContent = "No verified citations for this outcome.";
+          evidenceList.appendChild(emptyEvItem);
+          evidenceCount.textContent = "0";
         }
 
-        if (p.answer_text) {
+        // Only verified, policy-compliant successful runs render scholarly monograph content
+        if (isSuccess && p.answer_text) {
           renderMonograph(p.answer_text, activeCitations);
-        } else if (p.refusal_explanation) {
+        } else {
           monographContent.textContent = "";
           const refusalBox = document.createElement("div");
           refusalBox.className = "bg-surface-container-low p-space-lg rounded-DEFAULT border-l-4 border-secondary flex flex-col gap-space-xs";
 
           const titleSpan = document.createElement("span");
           titleSpan.className = "font-headline-sm text-headline-sm text-secondary font-semibold";
-          titleSpan.textContent = "Scholarly Abstention Notice";
+          titleSpan.textContent = isAbstention ? "Scholarly Abstention Notice" : "Query Execution Terminated";
 
           const pText = document.createElement("p");
           pText.className = "font-prose-editorial text-prose-editorial text-on-surface leading-relaxed";
-          pText.textContent = p.refusal_explanation;
+          pText.textContent = p.refusal_explanation || p.terminal_reason || "The agent could not synthesize a grounded answer satisfying academic verification policy.";
 
           refusalBox.appendChild(titleSpan);
           refusalBox.appendChild(pText);

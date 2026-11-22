@@ -329,7 +329,7 @@ class TestHealthEndpoint:
         data = response.json()
         assert data["status"] == "ok"
         assert data["service"] == "academic-agent"
-        assert data["version"] == "0.1.0"
+        assert data["version"] == "0.1.1"
 
     def test_openapi_schema_generation(self, client):
         response = client.get("/openapi.json")
@@ -723,4 +723,131 @@ class TestApiHardening:
         assert data["error"] == "Internal Server Error"
         assert "An internal server error occurred" in data["detail"]
         assert "Database password" not in data["detail"]
+
+
+# ============================================================================
+# Tests: Policy Leak Prevention (v0.1.1 Maintenance Freeze)
+# ============================================================================
+
+class TestApiPolicyLeakPrevention:
+    """Verifies that ungrounded or policy-rejected synthesis answers are never leaked through REST or SSE."""
+
+    def test_sync_query_rejected_synthesis_does_not_leak_unsupported_answer_or_citations(self, mock_agent_service):
+        unsupported_answer = AcademicAnswer(
+            query="What is Paxos consensus?",
+            answer_text="Paxos is a distributed consensus algorithm invented by Leslie Lamport.",
+            resolved_answer_text="Paxos is a distributed consensus algorithm invented by Leslie Lamport.",
+            evidence_context=EvidenceContext(items=()),
+            citation_occurrences=(),
+            validation=ValidationDiagnostics(
+                valid_cited_ids=(),
+                invalid_cited_ids=(),
+                malformed_citations=(),
+                has_valid_citation_integrity=True,
+            ),
+            policy_result=PolicyValidationResult(
+                outcome=PolicyOutcome.UNSUPPORTED_ANSWER,
+                is_compliant=False,
+                explanation="Unsupported answer: model made claims despite empty evidence context.",
+            ),
+            raw_response=LLMResponse(
+                content="Paxos is a distributed consensus algorithm invented by Leslie Lamport.",
+                role=MessageRole.ASSISTANT,
+                model_name="mock-synthesizer",
+                latency_ms=10.0,
+            ),
+            model_name="mock-synthesizer",
+            latency_ms=10.0,
+        )
+
+        def mock_unsupported_run(query, **kwargs):
+            return AgentTrace(
+                run_id=kwargs.get("run_id", "test_unsupported_api_run"),
+                query=query,
+                terminal_state=AgentTerminalState.TERMINATED_ABSTENTION.value,
+                refusal_explanation="Synthesizer generated claims unsupported by retrieved evidence.",
+                final_answer=unsupported_answer,
+                steps=(),
+            )
+
+        orig_run = mock_agent_service.agent.run
+        mock_agent_service.agent.run = mock_unsupported_run
+        try:
+            app = create_app(service=mock_agent_service)
+            client = TestClient(app)
+            response = client.post("/api/v1/query", json={"query": "What is Paxos consensus?"})
+            assert response.status_code == status.HTTP_200_OK
+            data = response.json()
+
+            assert data["status"] == ServiceRunStatus.ABSTENTION.value
+            assert "Leslie Lamport" not in (data.get("answer_text") or "")
+            assert data.get("raw_answer_text") is None
+            assert len(data.get("citations", [])) == 0
+            assert len(data.get("evidence_items", [])) == 0
+        finally:
+            mock_agent_service.agent.run = orig_run
+
+    def test_stream_query_rejected_synthesis_omits_answer_text_in_terminal_sse(self, mock_agent_service):
+        unsupported_answer = AcademicAnswer(
+            query="What is Paxos consensus?",
+            answer_text="Paxos is a distributed consensus algorithm invented by Leslie Lamport.",
+            resolved_answer_text="Paxos is a distributed consensus algorithm invented by Leslie Lamport.",
+            evidence_context=EvidenceContext(items=()),
+            citation_occurrences=(),
+            validation=ValidationDiagnostics(
+                valid_cited_ids=(),
+                invalid_cited_ids=(),
+                malformed_citations=(),
+                has_valid_citation_integrity=True,
+            ),
+            policy_result=PolicyValidationResult(
+                outcome=PolicyOutcome.UNSUPPORTED_ANSWER,
+                is_compliant=False,
+                explanation="Unsupported answer: model made claims despite empty evidence context.",
+            ),
+            raw_response=LLMResponse(
+                content="Paxos is a distributed consensus algorithm invented by Leslie Lamport.",
+                role=MessageRole.ASSISTANT,
+                model_name="mock-synthesizer",
+                latency_ms=10.0,
+            ),
+            model_name="mock-synthesizer",
+            latency_ms=10.0,
+        )
+
+        def mock_unsupported_run(query, observers=None, **kwargs):
+            trace = AgentTrace(
+                run_id=kwargs.get("run_id", "test_stream_unsupported_api"),
+                query=query,
+                terminal_state=AgentTerminalState.TERMINATED_ABSTENTION.value,
+                refusal_explanation="Synthesizer generated claims unsupported by retrieved evidence.",
+                final_answer=unsupported_answer,
+                steps=(),
+            )
+            if observers:
+                for obs in observers:
+                    obs.on_run_completed(trace.run_id, trace)
+            return trace
+
+        orig_run = mock_agent_service.agent.run
+        mock_agent_service.agent.run = mock_unsupported_run
+        try:
+            app = create_app(service=mock_agent_service)
+            client = TestClient(app)
+            with client.stream("POST", "/api/v1/query/stream", json={"query": "What is Paxos consensus?"}) as response:
+                assert response.status_code == status.HTTP_200_OK
+                terminal_payload = None
+                for line in response.iter_lines():
+                    if line.startswith("data: "):
+                        data = json.loads(line[6:].strip())
+                        if data.get("event_type") == "run_completed":
+                            terminal_payload = data.get("payload")
+
+                assert terminal_payload is not None
+                assert terminal_payload.get("status") == ServiceRunStatus.ABSTENTION.value
+                assert terminal_payload.get("answer_text") is None
+                assert "Leslie Lamport" not in str(terminal_payload)
+                assert len(terminal_payload.get("citations", [])) == 0
+        finally:
+            mock_agent_service.agent.run = orig_run
 

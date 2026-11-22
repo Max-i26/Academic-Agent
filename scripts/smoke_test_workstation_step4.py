@@ -294,7 +294,7 @@ def run_gate4_tests() -> dict[str, Any]:
     health_data = health_resp.json()
     print(f"Health Response: {health_data}")
     assert health_data.get("status") == "ok", f"Expected 'ok', got {health_data.get('status')}"
-    assert health_data.get("version") == "0.1.0"
+    assert health_data.get("version") in ("0.1.0", "0.1.1")
 
     results["health_check"] = health_data
 
@@ -324,13 +324,15 @@ def run_gate4_tests() -> dict[str, Any]:
     assert query_data["status"].lower() in ("completed", "abstention"), f"Expected completed or abstention, got {query_data['status']}"
     assert query_data["total_steps"] >= 2, f"Expected >= 2 steps, got {query_data['total_steps']}"
     assert query_data["answer_text"].strip(), "Answer text must not be empty."
-    assert len(query_data["citations"]) > 0, "Grounded citations must be present."
-    
-    # Check that citation is mapped to real physical lecture file
-    top_citation = query_data["citations"][0]
-    print(f"Top Citation: {top_citation}")
-    assert "source_file" in top_citation
-    assert "Lecture" in top_citation["source_file"] or "DS5104" in top_citation["source_file"]
+    if query_data["status"].lower() == "completed":
+        assert len(query_data["citations"]) > 0, "Grounded citations must be present."
+        top_citation = query_data["citations"][0]
+        print(f"Top Citation: {top_citation}")
+        assert "source_file" in top_citation
+        assert "Lecture" in top_citation["source_file"] or "DS5104" in top_citation["source_file"]
+    else:
+        assert len(query_data["citations"]) == 0, "Abstained run must contain zero citations."
+        print("Certified: Abstained run strictly omits citations.")
 
     results["physical_user_journey"] = {
         "status": "PASSED",
